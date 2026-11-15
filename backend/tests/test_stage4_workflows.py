@@ -4,7 +4,7 @@ import pytest
 from datetime import datetime, date, timezone
 from app.config import settings
 from app.auth.security import create_access_token
-from app.models.hr import Attendance, SourceImport, AuditEvent, ExternalEnrichment
+from app.models.hr import Attendance, SourceImport, AuditEvent, ExternalEnrichment, SubmissionPack
 from app.rules.engine import AuditEngine
 
 
@@ -215,3 +215,67 @@ def test_workflow_e_crustdata_unavailable_does_not_block_audit(client, db_sessio
     audit_res = engine.run_audit(db_session, "EMP001", "2026-10")
     assert audit_res["audit_run_id"] is not None
     assert audit_res["data_health"] == "complete"
+
+
+def test_workflow_d_controlled_export_five_step_pipeline(client, db_session):
+    """
+    Workflow D Controlled Export Test:
+    Validates the 5-step controlled export pipeline:
+    1. Create Intent -> 2. Validate Schema & Totals -> 3. Deliver -> 4. Reconcile -> 5. Finalize Delivered Status.
+    Also validates timeout safety check (verifies persisted state before retry).
+    """
+    pack = SubmissionPack(
+        snapshot_id="SNAP-WFD-TEST-001",
+        employee_id="EMP001",
+        period="2026-10",
+        policy_version="POLICY-2026.1",
+        frozen_data={"audit_summary": {"blocking_count": 0}, "sha256_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+        status="approved",
+        hr_decision="approved",
+    )
+    db_session.add(pack)
+    db_session.commit()
+
+    # Step 1 & 2: Create Intent & Validate Totals
+    res_intent = client.post(
+        "/exports",
+        headers={
+            "X-Service-Key": settings.N8N_SERVICE_API_KEY,
+            "X-Idempotency-Key": "EXP_INTENT_SNAP-WFD-TEST-001",
+        },
+        json={
+            "snapshot_id": "SNAP-WFD-TEST-001",
+            "export_type": "PDF_JSON_PACK",
+            "destination_system": "payroll_staging",
+        },
+    )
+    assert res_intent.status_code == 201
+    intent_data = res_intent.json()
+    export_run_id = intent_data["export_run_id"]
+    assert intent_data["pack_pdf_uri"] is not None
+    assert intent_data["pack_json_uri"] is not None
+
+    # Step 3 & 4: Deliver Pack & Reconcile Acknowledgement
+    res_deliver = client.post(
+        "/exports/deliver-destination",
+        headers={"X-Service-Key": settings.N8N_SERVICE_API_KEY},
+        json={
+            "export_run_id": export_run_id,
+            "destination": "payroll_staging",
+        },
+    )
+    assert res_deliver.status_code == 200
+    deliver_data = res_deliver.json()
+    assert deliver_data["acknowledged"] is True
+    assert deliver_data["status"] == "delivered"
+
+    # Step 5: Verify Persisted State Before Retry (Timeout Safety Check)
+    res_state = client.get(
+        f"/exports/{export_run_id}",
+        headers={"X-Service-Key": settings.N8N_SERVICE_API_KEY},
+    )
+    assert res_state.status_code == 200
+    state_data = res_state.json()
+    assert state_data["status"] == "delivered"
+    assert state_data["delivery_acknowledgement"] is not None
+
