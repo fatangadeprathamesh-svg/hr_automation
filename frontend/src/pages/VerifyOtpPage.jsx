@@ -1,19 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ShieldCheck, CheckCircle2, RotateCw, ArrowLeft, ShieldAlert } from 'lucide-react';
-import { verifyOtp, getCurrentPersona } from '../api';
+import { verifyOtp, resendOtp, getCurrentPersona } from '../api';
 import ErrorBanner from '../components/common/ErrorBanner';
 
 export default function VerifyOtpPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const email = searchParams.get('email') || 'alice@company.com';
+  const initialDevCode = searchParams.get('devCode') || '123456';
 
+  const [devCodeDisplay, setDevCodeDisplay] = useState(initialDevCode);
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState(null);
   const [shake, setShake] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [resendSeconds, setResendSeconds] = useState(45);
+  const [resendSeconds, setResendSeconds] = useState(60);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const inputRefs = useRef([]);
@@ -122,12 +124,20 @@ export default function VerifyOtpPage() {
     }
   }
 
-  function handleResend() {
+  async function handleResend() {
     if (resendSeconds > 0) return;
-    setResendSeconds(45);
     setError(null);
-    setOtp(['', '', '', '', '', '']);
-    inputRefs.current[0]?.focus();
+    try {
+      const res = await resendOtp({ email });
+      setResendSeconds(60);
+      setOtp(['', '', '', '', '', '']);
+      inputRefs.current[0]?.focus();
+      if (res && res.dev_code) {
+        setDevCodeDisplay(res.dev_code);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to resend code.');
+    }
   }
 
   return (
@@ -155,7 +165,7 @@ export default function VerifyOtpPage() {
             DEV mode active
           </span>
           <span className="bg-[#F26A21] text-white px-2 py-0.5 rounded-md font-mono text-[11px]">
-            Code: 123456
+            Code: {devCodeDisplay}
           </span>
         </div>
 

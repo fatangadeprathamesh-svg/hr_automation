@@ -57,6 +57,8 @@ def setup_test_db():
     )
     db.add_all([mgr1, emp1, hr1])
     db.commit()
+    from app.seed import seed_user_accounts
+    seed_user_accounts(db)
     db.close()
     yield
     Base.metadata.drop_all(bind=engine)

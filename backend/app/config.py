@@ -27,6 +27,18 @@ class Settings(BaseSettings):
     N8N_SERVICE_API_KEY: str = "n8n_secret_service_token_dev_placeholder"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_MINUTES: int = 480
+    GOOGLE_CLIENT_ID: Optional[str] = None
+
+    # Email & Verification (OTP)
+    SMTP_HOST: Optional[str] = None
+    SMTP_PORT: int = 587
+    SMTP_USER: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_FROM: str = "noreply@hraudit.local"
+    OTP_EXPIRATION_MINUTES: int = 10
+    OTP_MAX_ATTEMPTS: int = 5
+    OTP_RESEND_COOLDOWN_SECONDS: int = 60
+    AUTH_RATE_LIMIT_PER_MINUTE: int = 10
 
     # Optional Crustdata
     CRUSTDATA_ENABLED: bool = False

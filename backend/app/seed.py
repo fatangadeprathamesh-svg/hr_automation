@@ -16,6 +16,8 @@ from app.models.hr import (
     Document,
     AuditEvent,
 )
+from app.models.auth import UserAuth, OTPVerification
+from app.auth.service import hash_password
 from app.models.base import generate_uuid
 from app.imports.service import IngestionService, compute_natural_row_hash
 from app.rules.engine import DEFAULT_POLICY_VERSION, DEFAULT_POLICY_CONFIG
@@ -54,6 +56,35 @@ def seed_employees(db: Session):
 
     count = db.query(Employee).count()
     logger.info("Employees verified in database: %d total", count)
+
+
+def seed_user_accounts(db: Session):
+    """Seeds hashed password credentials and role linkages for all employees."""
+    employees = db.query(Employee).all()
+    default_hash = hash_password("Password123!")
+
+    for emp in employees:
+        existing = db.query(UserAuth).filter(UserAuth.employee_id == emp.employee_id).first()
+        if not existing:
+            if emp.employee_id.startswith("HR") or "hr" in emp.email:
+                role = "hr_admin"
+            elif emp.employee_id.startswith("MGR") or "manager" in emp.email:
+                role = "manager"
+            else:
+                role = "employee"
+
+            user = UserAuth(
+                employee_id=emp.employee_id,
+                organization_id=emp.organization_id,
+                email=emp.email,
+                password_hash=default_hash,
+                role=role,
+                is_verified=True,
+            )
+            db.add(user)
+    db.commit()
+    user_count = db.query(UserAuth).count()
+    logger.info("User accounts verified with hashed credentials: %d total", user_count)
 
 
 def seed_policy_versions(db: Session):
@@ -259,38 +290,38 @@ def seed_synthetic_history(db: Session):
                 )
                 db.add(exp)
 
-            # 4. Documents (Passports / Work Permits)
-            src_doc_id = f"DOC-{emp.employee_id}-PASSPORT"
-            existing_doc = db.query(Document).filter(
-                Document.organization_id == ORGANIZATION_ID,
-                Document.source_system == "hr_documents",
-                Document.source_record_id == src_doc_id,
-            ).first()
+    # 4. Seed Employee Passports / Work Permits (once per employee)
+    for emp in employees:
+        src_doc_id = f"DOC-{emp.employee_id}-PASSPORT"
+        existing_doc = db.query(Document).filter(
+            Document.organization_id == ORGANIZATION_ID,
+            Document.source_system == "hr_documents",
+            Document.source_record_id == src_doc_id,
+        ).first()
 
-            if not existing_doc:
-                # Varied expiry dates
-                if emp.employee_id == "EMP008":
-                    exp_date = date(2026, 11, 15)  # Expiring within 30 days (Warning)
-                elif emp.employee_id == "EMP018":
-                    exp_date = date(2026, 8, 30)   # Expired (Blocking)
-                else:
-                    exp_date = date(2028, 12, 31)  # Valid far future
+        if not existing_doc:
+            if emp.employee_id == "EMP008":
+                exp_date = date(2026, 11, 15)  # Expiring within 30 days (Warning)
+            elif emp.employee_id == "EMP018":
+                exp_date = date(2026, 8, 30)   # Expired (Blocking)
+            else:
+                exp_date = date(2028, 12, 31)  # Valid far future
 
-                doc = Document(
-                    id=generate_uuid(),
-                    organization_id=ORGANIZATION_ID,
-                    employee_id=emp.employee_id,
-                    document_type="passport",
-                    document_reference=f"PASS-{emp.employee_id}-US",
-                    issue_date=date(2020, 1, 1),
-                    expiry_date=exp_date,
-                    verification_status="verified",
-                    source_system="hr_documents",
-                    source_record_id=src_doc_id,
-                    import_id=import_record.import_id,
-                    record_version=1,
-                )
-                db.add(doc)
+            doc = Document(
+                id=generate_uuid(),
+                organization_id=ORGANIZATION_ID,
+                employee_id=emp.employee_id,
+                document_type="passport",
+                document_reference=f"PASS-{emp.employee_id}-US",
+                issue_date=date(2020, 1, 1),
+                expiry_date=exp_date,
+                verification_status="verified",
+                source_system="hr_documents",
+                source_record_id=src_doc_id,
+                import_id=generate_uuid(),
+                record_version=1,
+            )
+            db.add(doc)
 
     db.commit()
     logger.info("6 months of synthetic records successfully populated with varied edge cases.")
@@ -338,6 +369,7 @@ def init_db_and_seed():
 
     try:
         seed_employees(db)
+        seed_user_accounts(db)
         seed_policy_versions(db)
         seed_sample_csv_feeds(db)
         seed_synthetic_history(db)

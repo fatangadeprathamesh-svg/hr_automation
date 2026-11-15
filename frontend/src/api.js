@@ -215,7 +215,7 @@ const mockAuditLogs = [
 // AUTHENTICATION APIS
 // -------------------------------------------------------------
 
-export async function login({ email, password, isSignUp = false }) {
+export async function login({ email, password, fullName = "", isSignUp = false }) {
   if (USE_MOCK) {
     await new Promise((r) => setTimeout(r, 350));
     let persona = PERSONAS.EMP001;
@@ -228,26 +228,38 @@ export async function login({ email, password, isSignUp = false }) {
       success: true,
       message: isSignUp ? "Account created. Verification code sent." : "One-time passcode sent to your email.",
       email,
-      devCode: "123456",
+      dev_code: "123456",
       isDev: true,
       persona,
     };
   }
 
   try {
-    const res = await fetch(`${API_BASE}/api/auth/login`, {
+    const endpoint = isSignUp ? `${API_BASE}/api/auth/register` : `${API_BASE}/api/auth/login`;
+    const payload = isSignUp
+      ? { email, password, full_name: fullName || email.split("@")[0], role: "employee" }
+      : { email, password };
+
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, is_signup: isSignUp }),
+      credentials: "include",
+      body: JSON.stringify(payload),
     });
+
     if (res.ok) {
-      return res.json();
+      return await res.json();
     }
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || "Authentication failed.");
   } catch (e) {
+    if (e.message && (e.message.includes("Invalid") || e.message.includes("Rate limit") || e.message.includes("already exists") || e.message.includes("Password"))) {
+      throw e;
+    }
     console.warn("Auth endpoint offline, using dev persona login:", e);
   }
 
-  // Graceful dev fallback
+  // Graceful offline dev fallback
   let persona = PERSONAS.EMP001;
   if (email.toLowerCase().includes("bob") || email.toLowerCase().includes("manager")) {
     persona = PERSONAS.MGR001;
@@ -258,7 +270,7 @@ export async function login({ email, password, isSignUp = false }) {
     success: true,
     message: isSignUp ? "Account created. Verification code sent." : "One-time passcode sent to your email.",
     email,
-    devCode: "123456",
+    dev_code: "123456",
     isDev: true,
     persona,
   };
@@ -294,16 +306,26 @@ export async function verifyOtp({ email, code }) {
     const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ email, code }),
     });
+
     if (res.ok) {
       const data = await res.json();
       if (data.token) {
         setToken(data.token);
       }
+      if (data.persona) {
+        setPersona(data.persona);
+      }
       return data;
     }
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || "Invalid verification code.");
   } catch (e) {
+    if (e.message && (e.message.includes("Invalid") || e.message.includes("expired") || e.message.includes("Maximum") || e.message.includes("Rate limit"))) {
+      throw e;
+    }
     console.warn("Auth verification endpoint offline, using dev persona OTP:", e);
   }
 
@@ -330,9 +352,109 @@ export async function verifyOtp({ email, code }) {
   };
 }
 
-export function logout() {
+export async function resendOtp({ email }) {
+  if (USE_MOCK) {
+    await new Promise((r) => setTimeout(r, 300));
+    return {
+      success: true,
+      message: "A new verification code has been sent to your email.",
+      email,
+      dev_code: "123456",
+    };
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/resend-otp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email }),
+    });
+
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || "Unable to resend OTP at this time.");
+  } catch (e) {
+    if (e.message && (e.message.includes("cooldown") || e.message.includes("wait") || e.message.includes("Rate limit"))) {
+      throw e;
+    }
+    console.warn("Resend OTP endpoint offline, using dev fallback:", e);
+    return {
+      success: true,
+      message: "DEV mode: Code resent (123456).",
+      email,
+      dev_code: "123456",
+    };
+  }
+}
+
+export async function googleSignIn({ credential }) {
+  if (USE_MOCK) {
+    await new Promise((r) => setTimeout(r, 400));
+    const persona = PERSONAS.EMP001;
+    setPersona(persona);
+    const token = `DEV_TOKEN_${persona.id}_${persona.role}`;
+    setToken(token);
+    return { success: true, token, persona, role: persona.role };
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/google`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ credential }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.token) {
+        setToken(data.token);
+      }
+      if (data.persona) {
+        setPersona(data.persona);
+      }
+      return data;
+    }
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || "Google Sign-In failed.");
+  } catch (e) {
+    if (e.message && (e.message.includes("token") || e.message.includes("credential"))) {
+      throw e;
+    }
+    console.warn("Google Sign-In backend offline, using dev fallback:", e);
+    const persona = PERSONAS.EMP001;
+    setPersona(persona);
+    const token = `DEV_TOKEN_${persona.id}_${persona.role}`;
+    setToken(token);
+    return { success: true, token, persona, role: persona.role };
+  }
+}
+
+export async function logout() {
+  try {
+    await fetch(`${API_BASE}/api/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
+  } catch (_) {}
   setToken("");
   localStorage.removeItem("hr_current_persona");
+}
+
+export async function getAuthMe() {
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/me`, {
+      headers: getAuthHeaders(),
+      credentials: "include",
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (_) {}
+  return null;
 }
 
 // Reset or resolve mock flags for live interactive demo
@@ -396,6 +518,7 @@ export async function fetchReadiness(period = "2026-10") {
   try {
     const res = await fetch(`${API_BASE}/employees/me/readiness?period=${period}`, {
       headers: getAuthHeaders(),
+      credentials: "include",
     });
     if (res.ok) {
       const data = await res.json();
@@ -503,6 +626,7 @@ export async function submitCorrection(payload) {
     const res = await fetch(`${API_BASE}/corrections`, {
       method: "POST",
       headers: getAuthHeaders(),
+      credentials: "include",
       body: JSON.stringify(payload),
     });
     if (res.ok) {
@@ -546,6 +670,7 @@ export async function submitMonthEnd(period = "2026-10") {
     const res = await fetch(`${API_BASE}/submissions`, {
       method: "POST",
       headers: getAuthHeaders(),
+      credentials: "include",
       body: JSON.stringify({ period }),
     });
     if (res.ok) {
@@ -621,7 +746,10 @@ export async function fetchPendingCorrections() {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/corrections/pending`, { headers: getAuthHeaders() });
+    const res = await fetch(`${API_BASE}/corrections/pending`, {
+      headers: getAuthHeaders(),
+      credentials: "include",
+    });
     if (res.ok) {
       const data = await res.json();
       const list = Array.isArray(data) ? data : (data.items || []);
@@ -677,6 +805,7 @@ export async function decideCorrection(correctionId, decision, managerReason) {
     const res = await fetch(`${API_BASE}/corrections/${correctionId}/decision`, {
       method: "POST",
       headers: getAuthHeaders(),
+      credentials: "include",
       body: JSON.stringify({ decision, manager_reason: managerReason }),
     });
     if (res.ok) {
@@ -800,7 +929,10 @@ export async function fetchHRMetrics(period = "2026-10") {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/submissions?period=${period}`, { headers: getAuthHeaders() });
+    const res = await fetch(`${API_BASE}/submissions?period=${period}`, {
+      headers: getAuthHeaders(),
+      credentials: "include",
+    });
     if (res.ok) {
       const data = await res.json();
       const list = Array.isArray(data) ? data : [];
@@ -870,7 +1002,10 @@ export async function fetchSubmissions(period = "2026-10") {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/submissions?period=${period}`, { headers: getAuthHeaders() });
+    const res = await fetch(`${API_BASE}/submissions?period=${period}`, {
+      headers: getAuthHeaders(),
+      credentials: "include",
+    });
     if (res.ok) {
       const data = await res.json();
       const list = Array.isArray(data) ? data : [];
@@ -915,6 +1050,7 @@ export async function decideSubmission(snapshotId, decision, hrReason, assignedO
     const res = await fetch(`${API_BASE}/submissions/${snapshotId}/hr-decision`, {
       method: "POST",
       headers: getAuthHeaders(),
+      credentials: "include",
       body: JSON.stringify({
         decision,
         hr_reason: hrReason,
@@ -961,6 +1097,7 @@ export async function createExportPack(snapshotId, exportType = "PDF_JSON_PACK")
     const res = await fetch(`${API_BASE}/exports`, {
       method: "POST",
       headers: getAuthHeaders(),
+      credentials: "include",
       body: JSON.stringify({
         snapshot_id: snapshotId,
         export_type: exportType,
@@ -1002,7 +1139,10 @@ export async function fetchAuditLog() {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/audit-events`, { headers: getAuthHeaders() });
+    const res = await fetch(`${API_BASE}/audit-events`, {
+      headers: getAuthHeaders(),
+      credentials: "include",
+    });
     if (res.ok) {
       const data = await res.json();
       return data;
@@ -1035,7 +1175,10 @@ export async function verifyLedgerIntegrity() {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/audit-events/verify-integrity`, { headers: getAuthHeaders() });
+    const res = await fetch(`${API_BASE}/audit-events/verify-integrity`, {
+      headers: getAuthHeaders(),
+      credentials: "include",
+    });
     if (res.ok) {
       return res.json();
     }

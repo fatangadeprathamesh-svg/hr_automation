@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
-from fastapi import Header, HTTPException, status, Depends
+from fastapi import Request, Response, Header, HTTPException, status, Depends
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 from app.config import settings
@@ -43,7 +43,36 @@ def create_access_token(
     return encoded_jwt
 
 
+def set_auth_cookie(response: Response, token: str) -> None:
+    """
+    Sets a secure httpOnly cookie session.
+    Protects against XSS token exfiltration.
+    """
+    max_age_seconds = settings.JWT_EXPIRATION_MINUTES * 60
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        max_age=max_age_seconds,
+        expires=max_age_seconds,
+        httponly=True,
+        samesite="lax",
+        secure=False if settings.ENVIRONMENT == "development" else True,
+        path="/",
+    )
+
+
+def clear_auth_cookie(response: Response) -> None:
+    """Clears the httpOnly session cookie on logout."""
+    response.delete_cookie(
+        key="access_token",
+        path="/",
+        httponly=True,
+        samesite="lax",
+    )
+
+
 def get_current_actor(
+    request: Request,
     authorization: Optional[str] = Header(None),
     x_service_key: Optional[str] = Header(None),
     db: Session = Depends(get_db),
@@ -52,6 +81,7 @@ def get_current_actor(
     Non-negotiable Design Rule 4:
     Authorization is enforced server-side on every request.
     Derives actor and organization from verified identity, NEVER from request bodies.
+    Supports Authorization Bearer header AND httpOnly cookie sessions.
     """
     # 1. Check Service Authentication (e.g. n8n Orchestrator service key)
     if x_service_key:
@@ -67,14 +97,20 @@ def get_current_actor(
             detail="Invalid service API key.",
         )
 
-    # 2. Check Bearer Token
-    if not authorization or not authorization.startswith("Bearer "):
+    # 2. Extract Token from Authorization Header OR httpOnly Cookie
+    token: Optional[str] = None
+    auth_header = authorization or request.headers.get("Authorization")
+
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ", 1)[1].strip()
+    elif "access_token" in request.cookies:
+        token = request.cookies.get("access_token")
+
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid Authorization header.",
+            detail="Authentication required: Missing Authorization header or session cookie.",
         )
-
-    token = authorization.split(" ")[1]
 
     # Quick check for service bearer token
     if token == settings.N8N_SERVICE_API_KEY:
@@ -123,7 +159,7 @@ def get_current_actor(
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials.",
+            detail="Could not validate credentials: Token is invalid or expired.",
         )
 
 
