@@ -4,7 +4,7 @@ from typing import Optional
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=(".env", "../.env"), extra="ignore")
 
     ENVIRONMENT: str = "development"
     LOG_LEVEL: str = "INFO"
