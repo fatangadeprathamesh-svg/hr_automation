@@ -1,0 +1,9 @@
+{
+  "name": "hr-self-audit-root",
+  "private": true,
+  "description": "Root workspace proxy for Month-End HR Self-Audit Assistant",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build"
+  }
+}
