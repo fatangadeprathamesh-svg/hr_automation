@@ -296,20 +296,37 @@ export function logout() {
   localStorage.removeItem("hr_current_persona");
 }
 
+// Reset or resolve mock flags for live interactive demo
+export function resolveAllBlockersDemo() {
+  mockFlagsState = mockFlagsState.map((f) => ({
+    ...f,
+    status: "Resolved",
+    severity: "RESOLVED",
+  }));
+}
+
+export function resetFlagsDemo() {
+  mockFlagsState = JSON.parse(JSON.stringify(initialMockFlags));
+}
+
 // -------------------------------------------------------------
 // EMPLOYEE APIS
 // -------------------------------------------------------------
 
 export async function fetchReadiness(period = "2026-10") {
   if (USE_MOCK) {
-    await new Promise((r) => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 200));
     const blockingCount = mockFlagsState.filter((f) => f.severity === "BLOCKING" && f.status !== "Resolved").length;
     const warningCount = mockFlagsState.filter((f) => f.severity === "WARNING" && f.status !== "Resolved").length;
     const resolvedCount = mockFlagsState.filter((f) => f.status === "Resolved").length;
-    const totalFlags = mockFlagsState.length;
     
-    // Readiness percentage calculation
-    const readiness = blockingCount === 0 ? 100 : Math.max(10, Math.round(((totalFlags - blockingCount) / totalFlags) * 100));
+    // Starting score is 78% when 2 blockers open; animates to 100% when 0 blockers
+    let readiness = 78;
+    if (blockingCount === 0) {
+      readiness = 100;
+    } else if (blockingCount === 1) {
+      readiness = 89;
+    }
 
     return {
       period,
@@ -322,12 +339,12 @@ export async function fetchReadiness(period = "2026-10") {
       feed_status: "COMPLETE",
       flags: [...mockFlagsState],
       trend_history: [
-        { month: "May", score: 92 },
-        { month: "Jun", score: 88 },
-        { month: "Jul", score: 96 },
-        { month: "Aug", score: 82 },
-        { month: "Sep", score: 94 },
-        { month: "Oct", score: readiness },
+        { month: "May", score: 92, target: 95 },
+        { month: "Jun", score: 88, target: 95 },
+        { month: "Jul", score: 96, target: 95 },
+        { month: "Aug", score: 82, target: 95 },
+        { month: "Sep", score: 94, target: 95 },
+        { month: "Oct", score: readiness, target: 95 },
       ],
       issues_by_type: [
         { type: "Missing Punch", count: mockFlagsState.filter(f => f.rule_id === "missing_punch" && f.status !== "Resolved").length },
@@ -507,9 +524,71 @@ export async function decideCorrection(correctionId, decision, managerReason) {
 
 export async function fetchHRMetrics(period = "2026-10") {
   if (USE_MOCK) {
-    await new Promise((r) => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 200));
+
+    if (period === "2026-09") {
+      return {
+        period: "2026-09",
+        submitted_count: 28,
+        pending_count: 2,
+        total_employees: 30,
+        open_blockers: 1,
+        average_readiness: 96.4,
+        average_resolve_days: 1.3,
+        submission_donut: [
+          { name: "Submitted", value: 28, fill: "#10B981" },
+          { name: "Pending", value: 2, fill: "#F26A21" },
+        ],
+        issues_by_rule: [
+          { rule: "Missing Punch", count: 6, blockers: 2, warnings: 4 },
+          { rule: "Hours Mismatch", count: 4, blockers: 1, warnings: 3 },
+          { rule: "Missing Receipt", count: 5, blockers: 0, warnings: 5 },
+          { rule: "Leave Overlap", count: 1, blockers: 1, warnings: 0 },
+          { rule: "Unapproved OT", count: 0, blockers: 0, warnings: 0 },
+        ],
+        top_recurring_issues: [
+          { rank: 1, rule: "Missing Out-Punch on Fridays", frequency: 6, impact: "Medium" },
+          { rank: 2, rule: "Expense Claims Over $25 Missing Invoice", frequency: 5, impact: "Medium" },
+          { rank: 3, rule: "Timesheet vs Access Badge > 30m", frequency: 4, impact: "High" },
+          { rank: 4, rule: "Annual Leave Overlap with Work Hours", frequency: 1, impact: "High" },
+          { rank: 5, rule: "Overtime Missing Pre-Approval", frequency: 0, impact: "Low" },
+        ],
+      };
+    }
+
+    if (period === "2026-08") {
+      return {
+        period: "2026-08",
+        submitted_count: 26,
+        pending_count: 4,
+        total_employees: 30,
+        open_blockers: 5,
+        average_readiness: 88.5,
+        average_resolve_days: 2.1,
+        submission_donut: [
+          { name: "Submitted", value: 26, fill: "#10B981" },
+          { name: "Pending", value: 4, fill: "#F26A21" },
+        ],
+        issues_by_rule: [
+          { rule: "Missing Punch", count: 11, blockers: 7, warnings: 4 },
+          { rule: "Hours Mismatch", count: 8, blockers: 5, warnings: 3 },
+          { rule: "Missing Receipt", count: 9, blockers: 3, warnings: 6 },
+          { rule: "Leave Overlap", count: 4, blockers: 4, warnings: 0 },
+          { rule: "Unapproved OT", count: 3, blockers: 2, warnings: 1 },
+        ],
+        top_recurring_issues: [
+          { rank: 1, rule: "Missing Out-Punch on Fridays", frequency: 11, impact: "High" },
+          { rank: 2, rule: "Expense Claims Over $25 Missing Invoice", frequency: 9, impact: "Medium" },
+          { rank: 3, rule: "Timesheet vs Access Badge > 30m", frequency: 8, impact: "High" },
+          { rank: 4, rule: "Annual Leave Overlap with Work Hours", frequency: 4, impact: "High" },
+          { rank: 5, rule: "Overtime Missing Pre-Approval", frequency: 3, impact: "Medium" },
+        ],
+      };
+    }
+
+    // Default: October 2026
     return {
-      period,
+      period: "2026-10",
       submitted_count: 24,
       pending_count: 6,
       total_employees: 30,

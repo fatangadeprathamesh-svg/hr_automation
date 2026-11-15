@@ -11,6 +11,20 @@ import StatusPill from '../components/common/StatusPill';
 import SkeletonLoader from '../components/common/SkeletonLoader';
 import EmptyState from '../components/common/EmptyState';
 import ErrorBanner from '../components/common/ErrorBanner';
+import GlassTooltip from '../components/common/GlassTooltip';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from 'recharts';
 import {
   ShieldCheck,
   Clock,
@@ -21,9 +35,14 @@ import {
   X,
   Check,
   RotateCcw,
+  Calendar,
+  Layers,
+  PieChart as PieIcon,
+  Flame,
 } from 'lucide-react';
 
 export default function HRPage() {
+  const [selectedMonth, setSelectedMonth] = useState('2026-10');
   const [metrics, setMetrics] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,16 +60,16 @@ export default function HRPage() {
   const [exportingId, setExportingId] = useState(null);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData(selectedMonth);
+  }, [selectedMonth]);
 
-  async function loadData() {
+  async function loadData(month) {
     setLoading(true);
     setError(null);
     try {
       const [m, s] = await Promise.all([
-        fetchHRMetrics('2026-10'),
-        fetchSubmissions('2026-10'),
+        fetchHRMetrics(month),
+        fetchSubmissions(month),
       ]);
       setMetrics(m);
       setSubmissions(s);
@@ -80,7 +99,7 @@ export default function HRPage() {
       );
       setSelectedSub(null);
       setHrReason('');
-      await loadData();
+      await loadData(selectedMonth);
     } catch (err) {
       setError(err.message || 'Failed to record HR decision.');
     } finally {
@@ -101,13 +120,21 @@ export default function HRPage() {
     }
   }
 
-  if (loading) {
+  if (loading && !metrics) {
     return <SkeletonLoader rows={6} />;
   }
 
+  const donutData = metrics?.submission_donut || [
+    { name: 'Submitted', value: 24, fill: '#10B981' },
+    { name: 'Pending', value: 6, fill: '#F26A21' },
+  ];
+
+  const issuesByRule = metrics?.issues_by_rule || [];
+  const topRecurring = metrics?.top_recurring_issues || [];
+
   return (
     <div className="space-y-6">
-      {/* Notifications */}
+      {/* Top Notification Alerts */}
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
       {successMsg && (
         <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 p-4 flex items-center justify-between text-emerald-800 dark:text-emerald-200 text-xs font-semibold">
@@ -121,12 +148,42 @@ export default function HRPage() {
         </div>
       )}
 
-      {/* KPI Stats Grid */}
+      {/* Header with Month Selector Dropdown */}
+      <div className="glass-panel rounded-2xl px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-base font-bold text-slate-900 dark:text-white">
+            Company-Wide HR Audit Dashboard
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Monitoring submission completion rates, policy blockers, and payroll export readiness.
+          </p>
+        </div>
+
+        {/* Month Selector */}
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-[#F26A21]" />
+          <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+            Audit Month:
+          </span>
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-xs font-bold text-slate-800 dark:text-white focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none"
+            aria-label="Select audit cycle month"
+          >
+            <option value="2026-10">October 2026 (Active Close)</option>
+            <option value="2026-09">September 2026 (Archived)</option>
+            <option value="2026-08">August 2026 (Archived)</option>
+          </select>
+        </div>
+      </div>
+
+      {/* 4 Financial KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
-          title="Submission Progress"
+          title="Submitted vs Pending"
           value={`${metrics?.submitted_count || 24} / ${metrics?.total_employees || 30}`}
-          subtitle="80% submission rate"
+          subtitle="80.0% completion rate"
           icon={ShieldCheck}
           color="green"
         />
@@ -147,13 +204,169 @@ export default function HRPage() {
         <StatsCard
           title="Avg Time to Resolve"
           value={`${metrics?.average_resolve_days || 1.8} Days`}
-          subtitle="Target: under 2.5 days"
+          subtitle="Policy SLA: under 2.5 days"
           icon={FileText}
           color="blue"
         />
       </div>
 
-      {/* Submissions Queue (Solid Table) */}
+      {/* Financial-Dashboard Recharts Section: Donut + Stacked Bar */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Chart 1: Submission Donut Chart (4 cols) */}
+        <GlassCard className="lg:col-span-4 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <PieIcon className="w-4 h-4 text-[#10B981]" />
+                <span>Submission Progress</span>
+              </h3>
+              <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                {Math.round(((metrics?.submitted_count || 24) / (metrics?.total_employees || 30)) * 100)}%
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+              Ratio of locked employee submissions vs pending drafts.
+            </p>
+          </div>
+
+          <div className="h-60 w-full relative flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={donutData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {donutData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill || '#F26A21'} />
+                  ))}
+                </Pie>
+                <Tooltip content={<GlassTooltip unit=" employees" />} />
+                <Legend
+                  verticalAlign="bottom"
+                  height={36}
+                  iconType="circle"
+                  formatter={(value) => (
+                    <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">{value}</span>
+                  )}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            {/* Center label */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-8">
+              <span className="text-xl font-extrabold text-slate-800 dark:text-white">
+                {metrics?.submitted_count || 24}/{metrics?.total_employees || 30}
+              </span>
+              <span className="text-[10px] text-slate-400 uppercase font-semibold">Closed</span>
+            </div>
+          </div>
+
+          <div className="mt-2 pt-3 border-t border-slate-200/50 dark:border-slate-700/50 text-[11px] text-slate-500 dark:text-slate-400">
+            <strong>Summary:</strong> {metrics?.submitted_count || 24} of {metrics?.total_employees || 30} records have met the submission gate; {metrics?.pending_count || 6} draft records require resolution.
+          </div>
+        </GlassCard>
+
+        {/* Chart 2: Issues-by-Rule Stacked Bar Chart (8 cols) */}
+        <GlassCard className="lg:col-span-8 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Layers className="w-4 h-4 text-[#F26A21]" />
+                <span>Issues by Policy Rule (Blockers vs Warnings)</span>
+              </h3>
+              <div className="flex items-center gap-2 text-[11px]">
+                <span className="inline-flex items-center gap-1 font-semibold text-rose-600 dark:text-rose-400">
+                  <span className="w-2 h-2 rounded-full bg-rose-500" /> Blockers (Red)
+                </span>
+                <span className="inline-flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" /> Warnings (Amber)
+                </span>
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+              Breakdown of non-blocking warnings versus hard payroll submission blockers.
+            </p>
+          </div>
+
+          <div className="h-60 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={issuesByRule} margin={{ top: 10, right: 10, left: -20, bottom: 15 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
+                <XAxis
+                  dataKey="rule"
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  label={{ value: 'Policy Rule Family', position: 'insideBottom', offset: -10, fontSize: 11, fill: '#64748b' }}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  label={{ value: 'Flags Count', angle: -90, position: 'insideLeft', offset: 25, fontSize: 11, fill: '#64748b' }}
+                />
+                <Tooltip content={<GlassTooltip />} />
+                <Bar dataKey="blockers" name="Hard Blockers" fill="#EF4444" stackId="a" />
+                <Bar dataKey="warnings" name="Warnings" fill="#F59E0B" stackId="a" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="mt-2 pt-3 border-t border-slate-200/50 dark:border-slate-700/50 text-[11px] text-slate-500 dark:text-slate-400">
+            <strong>Summary:</strong> Missing punches and timesheet hour discrepancies represent the primary sources of payroll blocking flags.
+          </div>
+        </GlassCard>
+      </div>
+
+      {/* Top 5 Recurring Issues Card */}
+      <GlassCard>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <Flame className="w-4 h-4 text-[#F26A21]" />
+            <span>Top 5 Recurring Policy Exceptions ({selectedMonth})</span>
+          </h3>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+            Aggregated across 30 employees
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+          {topRecurring.map((issue) => (
+            <div
+              key={issue.rank}
+              className="p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60 flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="w-5 h-5 rounded-full bg-orange-100 dark:bg-orange-950/60 text-[#F26A21] flex items-center justify-center font-bold text-[10px]">
+                    #{issue.rank}
+                  </span>
+                  <span
+                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      issue.impact === 'High'
+                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
+                        : 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
+                    }`}
+                  >
+                    {issue.impact}
+                  </span>
+                </div>
+                <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 line-clamp-2">
+                  {issue.rule}
+                </h4>
+              </div>
+              <span className="mt-2 text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                {issue.frequency} instances
+              </span>
+            </div>
+          ))}
+        </div>
+      </GlassCard>
+
+      {/* Submissions Queue (Solid Table per spec) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
@@ -165,7 +378,7 @@ export default function HRPage() {
             </p>
           </div>
           <button
-            onClick={loadData}
+            onClick={() => loadData(selectedMonth)}
             className="text-xs font-semibold text-[#F26A21] hover:underline"
           >
             Refresh Submissions
@@ -248,7 +461,7 @@ export default function HRPage() {
         ) : (
           <EmptyState
             title="Zero Submissions"
-            description="No employee snapshot packs have been frozen for the October 2026 cycle yet."
+            description={`No employee snapshot packs have been frozen for the ${selectedMonth} cycle yet.`}
           />
         )}
       </div>

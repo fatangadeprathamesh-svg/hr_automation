@@ -3,7 +3,8 @@ import {
   fetchReadiness,
   submitCorrection,
   submitMonthEnd,
-  getCurrentPersona,
+  resolveAllBlockersDemo,
+  resetFlagsDemo,
 } from '../api';
 import GlassCard from '../components/common/GlassCard';
 import ReadinessRing from '../components/common/ReadinessRing';
@@ -12,6 +13,19 @@ import FlagsTable from '../components/common/FlagsTable';
 import SkeletonLoader from '../components/common/SkeletonLoader';
 import EmptyState from '../components/common/EmptyState';
 import ErrorBanner from '../components/common/ErrorBanner';
+import GlassTooltip from '../components/common/GlassTooltip';
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Area,
+} from 'recharts';
 import {
   ShieldAlert,
   AlertTriangle,
@@ -20,7 +34,8 @@ import {
   Send,
   HelpCircle,
   X,
-  FileCheck,
+  Sparkles,
+  RotateCcw,
 } from 'lucide-react';
 
 export default function EmployeePage() {
@@ -56,6 +71,18 @@ export default function EmployeePage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleDemoResolveBlockers() {
+    resolveAllBlockersDemo();
+    loadData();
+    setSuccessMsg('Blockers resolved! Notice the circular ring smoothly animating from 78% to 100%.');
+  }
+
+  function handleDemoReset() {
+    resetFlagsDemo();
+    loadData();
+    setSuccessMsg('Audit flags reset to baseline 78% with open blockers.');
   }
 
   async function handleCorrectionSubmit(e) {
@@ -102,17 +129,13 @@ export default function EmployeePage() {
   }
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <SkeletonLoader rows={6} />
-      </div>
-    );
+    return <SkeletonLoader rows={6} />;
   }
 
   const blockers = data?.blocking_count || 0;
   const warnings = data?.warning_count || 0;
   const resolved = data?.resolved_count || 0;
-  const readiness = data?.readiness_percentage || 0;
+  const readiness = data?.readiness_percentage || 78;
   const canSubmit = blockers === 0;
 
   return (
@@ -125,14 +148,43 @@ export default function EmployeePage() {
             <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span>{successMsg}</span>
           </div>
-          <button
-            onClick={() => setSuccessMsg(null)}
-            className="text-emerald-600 hover:text-emerald-800"
-          >
+          <button onClick={() => setSuccessMsg(null)} className="text-emerald-600 hover:text-emerald-800">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
+
+      {/* Interactive Demo Simulation Bar */}
+      <div className="glass-panel rounded-2xl px-5 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200 font-medium">
+          <Sparkles className="w-4 h-4 text-[#F26A21]" />
+          <span>Interactive Readiness Simulation:</span>
+          <span className="text-slate-500 dark:text-slate-400">
+            Watch the readiness ring dynamically animate when blockers are resolved.
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {blockers > 0 ? (
+            <button
+              type="button"
+              onClick={handleDemoResolveBlockers}
+              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-1.5 shadow-sm shadow-emerald-600/20 transition-colors"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Simulate Resolve All Blockers (Animate to 100%)</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleDemoReset}
+              className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold flex items-center gap-1.5 transition-colors"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset to Initial State (78%)</span>
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Hero Overview Grid: Readiness Ring + Quick KPI Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -160,7 +212,7 @@ export default function EmployeePage() {
           </button>
         </GlassCard>
 
-        {/* Stats Grid */}
+        {/* Stats Cards Grid */}
         <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <StatsCard
             title="Blocking Issues"
@@ -193,7 +245,111 @@ export default function EmployeePage() {
         </div>
       </div>
 
-      {/* Main Flags Section (Solid Table) */}
+      {/* Financial-Dashboard Recharts Section: 6-Month Trend & Issues by Type */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Chart 1: 6-Month Trend Line Chart */}
+        <GlassCard className="flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                6-Month Audit Readiness Trend
+              </h3>
+              <span className="text-[11px] font-mono text-[#F26A21] font-semibold bg-orange-50 dark:bg-orange-950/40 border border-orange-200/60 dark:border-orange-800/60 px-2 py-0.5 rounded-md">
+                Current: {readiness}%
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+              Monthly compliance score across attendance, timesheets, and expense audits.
+            </p>
+          </div>
+
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={data?.trend_history || []} margin={{ top: 10, right: 10, left: -20, bottom: 15 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
+                <XAxis
+                  dataKey="month"
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  label={{ value: 'Audit Cycle Period', position: 'insideBottom', offset: -10, fontSize: 11, fill: '#64748b' }}
+                />
+                <YAxis
+                  domain={[60, 100]}
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  tickFormatter={(v) => `${v}%`}
+                  label={{ value: 'Score (%)', angle: -90, position: 'insideLeft', offset: 25, fontSize: 11, fill: '#64748b' }}
+                />
+                <Tooltip content={<GlassTooltip unit="%" />} />
+                <Line
+                  type="monotone"
+                  dataKey="score"
+                  name="Readiness Score"
+                  stroke="#F26A21"
+                  strokeWidth={3}
+                  dot={{ r: 5, fill: '#F26A21', strokeWidth: 2, stroke: '#ffffff' }}
+                  activeDot={{ r: 7, fill: '#F26A21', stroke: '#ffffff', strokeWidth: 2 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="mt-3 pt-3 border-t border-slate-200/50 dark:border-slate-700/50 text-[11px] text-slate-500 dark:text-slate-400">
+            <strong>Summary:</strong> Audit readiness averaged 90% over the last 6 months, dipping to {readiness}% in October due to unresolved punch exceptions.
+          </div>
+        </GlassCard>
+
+        {/* Chart 2: Issues by Type Bar Chart */}
+        <GlassCard className="flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                Open Issues by Category
+              </h3>
+              <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                Total Unresolved: {blockers + warnings}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+              Discrepancies segmented by policy rule family for the active cycle.
+            </p>
+          </div>
+
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data?.issues_by_type || []} margin={{ top: 10, right: 10, left: -20, bottom: 15 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
+                <XAxis
+                  dataKey="type"
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  label={{ value: 'Audit Rule Category', position: 'insideBottom', offset: -10, fontSize: 11, fill: '#64748b' }}
+                />
+                <YAxis
+                  domain={[0, 4]}
+                  allowDecimals={false}
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  label={{ value: 'Issue Count', angle: -90, position: 'insideLeft', offset: 25, fontSize: 11, fill: '#64748b' }}
+                />
+                <Tooltip content={<GlassTooltip />} />
+                <Bar
+                  dataKey="count"
+                  name="Unresolved Issues"
+                  fill="#F26A21"
+                  radius={[6, 6, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="mt-3 pt-3 border-t border-slate-200/50 dark:border-slate-700/50 text-[11px] text-slate-500 dark:text-slate-400">
+            <strong>Summary:</strong> Unresolved discrepancies are balanced across attendance missing punches, hours variance, and receipt uploads.
+          </div>
+        </GlassCard>
+      </div>
+
+      {/* Main Flags Section (Solid Table per spec) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
@@ -326,10 +482,7 @@ export default function EmployeePage() {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setExplainFlag(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
-              >
+              <button onClick={() => setExplainFlag(null)} className="p-1 rounded-lg text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
