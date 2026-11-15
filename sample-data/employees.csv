@@ -1,4 +1,31 @@
 employee_id,organization_id,email,full_name,manager_id,timezone,hire_date,is_active
-EMP001,ORG_DEMO_01,alice@example.com,Alice Employee,MGR001,America/New_York,2025-01-15,true
-MGR001,ORG_DEMO_01,bob.manager@example.com,Bob Manager,,America/New_York,2024-03-01,true
 HR001,ORG_DEMO_01,carol.hr@example.com,Carol HR Admin,,America/New_York,2023-06-01,true
+MGR001,ORG_DEMO_01,bob.manager@example.com,Bob Manager,,America/New_York,2024-03-01,true
+MGR002,ORG_DEMO_01,dan.manager@example.com,Dan Operations Manager,,America/New_York,2024-04-15,true
+MGR003,ORG_DEMO_01,elena.manager@example.com,Elena Product Manager,,America/Los_Angeles,2024-05-01,true
+EMP001,ORG_DEMO_01,alice@example.com,Alice Employee,MGR001,America/New_York,2025-01-15,true
+EMP002,ORG_DEMO_01,bryan.baker@example.com,Bryan Baker,MGR001,America/New_York,2025-02-01,true
+EMP003,ORG_DEMO_01,catherine.chen@example.com,Catherine Chen,MGR001,America/New_York,2025-02-15,true
+EMP004,ORG_DEMO_01,david.dev@example.com,David Developer,MGR001,America/New_York,2025-03-01,true
+EMP005,ORG_DEMO_01,eva.evans@example.com,Eva Evans,MGR001,America/New_York,2025-03-15,true
+EMP006,ORG_DEMO_01,frank.foster@example.com,Frank Foster,MGR001,America/New_York,2025-04-01,true
+EMP007,ORG_DEMO_01,grace.green@example.com,Grace Green,MGR001,America/New_York,2025-04-15,true
+EMP008,ORG_DEMO_01,henry.hill@example.com,Henry Hill,MGR001,America/New_York,2025-05-01,true
+EMP009,ORG_DEMO_01,iris.ingram@example.com,Iris Ingram,MGR001,America/New_York,2025-05-15,true
+EMP010,ORG_DEMO_01,jack.jones@example.com,Jack Jones,MGR001,America/New_York,2025-06-01,true
+EMP011,ORG_DEMO_01,ken.kelly@example.com,Ken Kelly,MGR002,America/Chicago,2025-01-10,true
+EMP012,ORG_DEMO_01,laura.lane@example.com,Laura Lane,MGR002,America/Chicago,2025-01-20,true
+EMP013,ORG_DEMO_01,mike.miller@example.com,Mike Miller,MGR002,America/Chicago,2025-02-10,true
+EMP014,ORG_DEMO_01,nina.nelson@example.com,Nina Nelson,MGR002,America/Chicago,2025-02-25,true
+EMP015,ORG_DEMO_01,oscar.ortiz@example.com,Oscar Ortiz,MGR002,America/Chicago,2025-03-10,true
+EMP016,ORG_DEMO_01,paula.price@example.com,Paula Price,MGR002,America/Chicago,2025-03-25,true
+EMP017,ORG_DEMO_01,quinn.quigley@example.com,Quinn Quigley,MGR002,America/Chicago,2025-04-10,true
+EMP018,ORG_DEMO_01,rachel.ross@example.com,Rachel Ross,MGR002,America/Chicago,2025-04-25,true
+EMP019,ORG_DEMO_01,steve.smith@example.com,Steve Smith,MGR002,America/Chicago,2025-05-10,true
+EMP020,ORG_DEMO_01,tina.turner@example.com,Tina Turner,MGR002,America/Chicago,2025-05-25,true
+EMP021,ORG_DEMO_01,uma.underwood@example.com,Uma Underwood,MGR003,America/Los_Angeles,2025-02-01,true
+EMP022,ORG_DEMO_01,victor.vance@example.com,Victor Vance,MGR003,America/Los_Angeles,2025-02-15,true
+EMP023,ORG_DEMO_01,wendy.white@example.com,Wendy White,MGR003,America/Los_Angeles,2025-03-01,true
+EMP024,ORG_DEMO_01,xavier.xu@example.com,Xavier Xu,MGR003,America/Los_Angeles,2025-03-15,true
+EMP025,ORG_DEMO_01,yasmin.young@example.com,Yasmin Young,MGR003,America/Los_Angeles,2025-04-01,true
+EMP026,ORG_DEMO_01,zack.zimmerman@example.com,Zack Zimmerman,MGR003,America/Los_Angeles,2025-04-15,true
