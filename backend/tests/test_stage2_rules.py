@@ -320,3 +320,168 @@ def test_cross_employee_audit_denied(client):
     )
     assert resp.status_code == 403
     assert "Forbidden" in resp.json()["detail"]
+
+
+def test_missing_punch_boundary_zero_minutes():
+    """Rule 1 Boundary: Clock-in and clock-out at identical minute returns PASS with 0 duration."""
+    rule = MissingPunchRule()
+    same_time = datetime(2026, 10, 1, 9, 0, 0, tzinfo=timezone.utc)
+    att = Attendance(
+        source_record_id="ATT_ZERO",
+        work_date=date(2026, 10, 1),
+        clock_in=same_time,
+        clock_out=same_time,
+    )
+    results = rule.evaluate(
+        context={"attendance": [att], "attendance_feed_complete": True},
+        policy_config={},
+        policy_version="POLICY-2026.2",
+    )
+    assert len(results) == 1
+    assert results[0].status == RuleOutcome.PASS
+    assert results[0].evidence["duration_hours"] == 0.0
+    assert results[0].policy_version == "POLICY-2026.2"
+
+
+def test_missing_punch_overnight_shift():
+    """Rule 1 Overnight: Shift crosses midnight (21:00 to 05:30 next day) with timezone preserved."""
+    rule = MissingPunchRule()
+    att = Attendance(
+        source_record_id="ATT_OVERNIGHT",
+        work_date=date(2026, 10, 14),
+        clock_in=datetime(2026, 10, 14, 21, 0, tzinfo=timezone.utc),
+        clock_out=datetime(2026, 10, 15, 5, 30, tzinfo=timezone.utc),
+    )
+    results = rule.evaluate(
+        context={"attendance": [att], "attendance_feed_complete": True},
+        policy_config={},
+        policy_version="POLICY-2026.2",
+    )
+    assert len(results) == 1
+    assert results[0].status == RuleOutcome.PASS
+    assert results[0].evidence["duration_hours"] == 8.5
+    assert results[0].policy_version == "POLICY-2026.2"
+
+
+def test_hours_mismatch_boundary_fail():
+    """Rule 3 Boundary: Discrepancy of 31 mins (>30m tolerance) returns FAIL (blocking)."""
+    rule = HoursMismatchRule()
+    att = Attendance(
+        source_record_id="ATT_BOUND_FAIL",
+        work_date=date(2026, 10, 1),
+        clock_in=datetime(2026, 10, 1, 9, 0, tzinfo=timezone.utc),
+        clock_out=datetime(2026, 10, 1, 16, 29, tzinfo=timezone.utc),  # 7 hours 29 mins
+    )
+    ts = Timesheet(
+        source_record_id="TS_BOUND_FAIL",
+        work_date=date(2026, 10, 1),
+        regular_hours=8.0,  # Delta is 31 minutes
+        overtime_hours=0.0,
+    )
+    results = rule.evaluate(
+        context={"attendance": [att], "timesheets": [ts], "leave": []},
+        policy_config={"hours_mismatch": {"tolerance_minutes": 30}},
+        policy_version="POLICY-2026.2",
+    )
+    assert len(results) == 1
+    assert results[0].status == RuleOutcome.FAIL
+    assert results[0].severity == RuleSeverity.BLOCKING
+    assert results[0].evidence["delta_minutes"] == 31.0
+    assert results[0].policy_version == "POLICY-2026.2"
+
+
+def test_hours_mismatch_overnight_shift():
+    """Rule 3 Overnight: Overnight punch 21:00-05:30 (8.5h) matching timesheet 8.5h returns PASS."""
+    rule = HoursMismatchRule()
+    att = Attendance(
+        source_record_id="ATT_TS_OVERNIGHT",
+        work_date=date(2026, 10, 25),
+        clock_in=datetime(2026, 10, 25, 21, 0, tzinfo=timezone.utc),
+        clock_out=datetime(2026, 10, 26, 5, 30, tzinfo=timezone.utc),  # 8.5 hours
+    )
+    ts = Timesheet(
+        source_record_id="TS_OVERNIGHT",
+        work_date=date(2026, 10, 25),
+        regular_hours=8.5,
+        overtime_hours=0.0,
+    )
+    results = rule.evaluate(
+        context={"attendance": [att], "timesheets": [ts], "leave": []},
+        policy_config={"hours_mismatch": {"tolerance_minutes": 30}},
+        policy_version="POLICY-2026.2",
+    )
+    assert len(results) == 1
+    assert results[0].status == RuleOutcome.PASS
+    assert results[0].evidence["delta_minutes"] == 0.0
+
+
+def test_missing_receipt_data_health_negative_amount():
+    """Rule 6 Missing Data: Negative expense amount flags data health issue (UNKNOWN)."""
+    rule = MissingReceiptRule()
+    claim = ExpenseClaim(
+        source_record_id="EXP_NEG",
+        amount=-50.0,
+        currency="USD",
+        category="Refund",
+        receipt_reference=None,
+    )
+    results = rule.evaluate(
+        context={"expense_claims": [claim]},
+        policy_config={"missing_receipt": {"receipt_required_threshold": 25.0}},
+        policy_version="POLICY-2026.2",
+    )
+    assert len(results) == 1
+    assert results[0].status == RuleOutcome.UNKNOWN
+    assert results[0].is_data_health_issue is True
+    assert results[0].evidence["data_health_issue"] == "NEGATIVE_EXPENSE_AMOUNT"
+
+
+def test_flags_carry_provenance_and_policy_versions(db_session):
+    """
+    Contract Test: Verifies that every AuditFlag emitted carries full evidence,
+    rule_version, policy_version, status, and severity.
+    """
+    engine = AuditEngine()
+    policy = PolicyVersion(
+        policy_version="POLICY-2026.2",
+        effective_from=date(2026, 7, 1),
+        effective_to=None,
+        rule_configurations={
+            "missing_punch": {"grace_period_minutes": 60},
+            "hours_mismatch": {"tolerance_minutes": 30},
+            "missing_receipt": {"receipt_required_threshold": 25.0},
+        },
+        is_active=True,
+    )
+    db_session.merge(policy)
+    db_session.commit()
+
+    att = Attendance(
+        organization_id="ORG_DEMO_01",
+        source_system="attendance",
+        source_record_id="ATT_PROV_01",
+        import_id="IMP_01",
+        employee_id="EMP001",
+        work_date=date(2026, 10, 10),
+        clock_in=datetime(2026, 10, 10, 9, 0, tzinfo=timezone.utc),
+        clock_out=None,  # Blocker flag
+    )
+    db_session.add(att)
+    db_session.commit()
+
+    res = engine.run_audit(
+        db=db_session,
+        employee_id="EMP001",
+        period="2026-10",
+        policy_version_id="POLICY-2026.2",
+    )
+
+    assert len(res["flags"]) >= 1
+    for flag in res["flags"]:
+        assert "evidence" in flag
+        assert isinstance(flag["evidence"], dict)
+        assert flag["rule_version"] == "1.0"
+        assert flag["policy_version"] == "POLICY-2026.2"
+        assert flag["status"] in ("pass", "fail", "unknown", "not_applicable")
+        assert flag["severity"] in ("blocking", "warning", "info")
+
