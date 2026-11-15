@@ -1,59 +1,46 @@
 import React, { useState } from 'react';
-import Navbar from './components/Navbar';
-import EmployeePortal from './components/EmployeePortal';
-import ManagerPortal from './components/ManagerPortal';
-import HRPortal from './components/HRPortal';
-import { PERSONAS, setPersona } from './api';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import LoginPage from './pages/LoginPage';
+import VerifyOtpPage from './pages/VerifyOtpPage';
+import EmployeePage from './pages/EmployeePage';
+import ManagerPage from './pages/ManagerPage';
+import HRPage from './pages/HRPage';
+import AuditLogPage from './pages/AuditLogPage';
+import AppLayout from './components/layout/AppLayout';
+import { getCurrentPersona } from './api';
 
 export default function App() {
-  const [currentPersona, setCurrentPersona] = useState(PERSONAS.EMP001);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [persona, setPersona] = useState(getCurrentPersona());
 
-  function handleSelectPersona(p) {
-    setPersona(p);
-    setCurrentPersona(p);
-    setRefreshTrigger((prev) => prev + 1);
-  }
-
-  function handleStateChange() {
-    setRefreshTrigger((prev) => prev + 1);
+  function handlePersonaChange(newPersona) {
+    setPersona(newPersona);
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      <Navbar
-        currentPersona={currentPersona}
-        onSelectPersona={handleSelectPersona}
-      />
+    <BrowserRouter>
+      <Routes>
+        {/* Public Authentication Shell Routes */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/verify" element={<VerifyOtpPage />} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {currentPersona.role === 'employee' && (
-          <EmployeePortal
-            key={`emp-${currentPersona.id}-${refreshTrigger}`}
-            persona={currentPersona}
-            onStateChange={handleStateChange}
-          />
-        )}
+        {/* Protected Application Shell Routes wrapped by AppLayout */}
+        <Route
+          element={
+            <AppLayout
+              title="Month-End HR Self-Audit Assistant"
+              onPersonaChange={handlePersonaChange}
+            />
+          }
+        >
+          <Route path="/employee" element={<EmployeePage key={persona?.id} />} />
+          <Route path="/manager" element={<ManagerPage key={persona?.id} />} />
+          <Route path="/hr" element={<HRPage key={persona?.id} />} />
+          <Route path="/audit-log" element={<AuditLogPage key={persona?.id} />} />
+        </Route>
 
-        {currentPersona.role === 'manager' && (
-          <ManagerPortal
-            key={`mgr-${currentPersona.id}-${refreshTrigger}`}
-            persona={currentPersona}
-            onStateChange={handleStateChange}
-          />
-        )}
-
-        {currentPersona.role === 'hr_admin' && (
-          <HRPortal
-            key={`hr-${currentPersona.id}-${refreshTrigger}`}
-            persona={currentPersona}
-          />
-        )}
-      </main>
-
-      <footer className="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400">
-        Month-End HR Self-Audit Assistant &copy; 2026. Deterministic rules &bull; Version-bound approvals &bull; Immutable audit ledger.
-      </footer>
-    </div>
+        {/* Fallback: Unknown URLs navigate to /login */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
