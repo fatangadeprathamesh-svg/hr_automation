@@ -1,0 +1,139 @@
+from datetime import datetime, timedelta, timezone
+from typing import Optional, Dict, Any
+from fastapi import Header, HTTPException, status, Depends
+from sqlalchemy.orm import Session
+from jose import JWTError, jwt
+from app.config import settings
+from app.database import get_db
+from app.models.hr import Employee
+
+
+class ActorIdentity:
+    """Verified identity derived strictly on the server-side."""
+    def __init__(
+        self,
+        actor_id: str,
+        organization_id: str,
+        role: str,
+        email: Optional[str] = None,
+        is_service: bool = False,
+    ):
+        self.actor_id = actor_id
+        self.organization_id = organization_id
+        self.role = role  # employee, manager, hr_admin, service
+        self.email = email
+        self.is_service = is_service
+
+    def __repr__(self) -> str:
+        return f"<ActorIdentity {self.actor_id} ({self.role}) org={self.organization_id}>"
+
+
+def create_access_token(
+    data: Dict[str, Any],
+    expires_delta: Optional[timedelta] = None,
+) -> str:
+    """Creates a signed JWT access token containing identity claims."""
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, settings.APP_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    return encoded_jwt
+
+
+def get_current_actor(
+    authorization: Optional[str] = Header(None),
+    x_service_key: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+) -> ActorIdentity:
+    """
+    Non-negotiable Design Rule 4:
+    Authorization is enforced server-side on every request.
+    Derives actor and organization from verified identity, NEVER from request bodies.
+    """
+    # 1. Check Service Authentication (e.g. n8n Orchestrator service key)
+    if x_service_key:
+        if x_service_key == settings.N8N_SERVICE_API_KEY:
+            return ActorIdentity(
+                actor_id="service:n8n",
+                organization_id=settings.ORGANIZATION_ID,
+                role="service",
+                is_service=True,
+            )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid service API key.",
+        )
+
+    # 2. Check Bearer Token
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid Authorization header.",
+        )
+
+    token = authorization.split(" ")[1]
+
+    # Quick check for service bearer token
+    if token == settings.N8N_SERVICE_API_KEY:
+        return ActorIdentity(
+            actor_id="service:n8n",
+            organization_id=settings.ORGANIZATION_ID,
+            role="service",
+            is_service=True,
+        )
+
+    # Support development persona tokens (used by frontend in dev mode)
+    if settings.ENVIRONMENT == "development" and token.startswith("DEV_TOKEN_"):
+        parts = token.split("_")
+        if len(parts) >= 4:
+            actor_id = parts[2]
+            role = "_".join(parts[3:])
+            emp = db.query(Employee).filter(Employee.employee_id == actor_id).first()
+            return ActorIdentity(
+                actor_id=actor_id,
+                organization_id=settings.ORGANIZATION_ID,
+                role=role,
+                email=emp.email if emp else f"{actor_id.lower()}@example.com",
+                is_service=(role == "service"),
+            )
+
+    try:
+        payload = jwt.decode(token, settings.APP_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        actor_id: str = payload.get("sub")
+        org_id: str = payload.get("org_id", settings.ORGANIZATION_ID)
+        role: str = payload.get("role", "employee")
+        email: Optional[str] = payload.get("email")
+
+        if actor_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token missing subject identifier.",
+            )
+
+        return ActorIdentity(
+            actor_id=actor_id,
+            organization_id=org_id,
+            role=role,
+            email=email,
+            is_service=False,
+        )
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials.",
+        )
+
+
+def require_role(*allowed_roles: str):
+    """RBAC dependency ensuring actor has one of the required roles."""
+    def role_checker(actor: ActorIdentity = Depends(get_current_actor)) -> ActorIdentity:
+        if actor.role not in allowed_roles and actor.role != "service":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Operation not permitted for role '{actor.role}'. Allowed: {list(allowed_roles)}",
+            )
+        return actor
+    return role_checker

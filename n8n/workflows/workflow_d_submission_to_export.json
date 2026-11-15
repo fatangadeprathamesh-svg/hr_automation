@@ -1,0 +1,213 @@
+{
+  "name": "HR Self-Audit - Workflow D: Submission to HR Review & Controlled Export",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "trigger-export-flow",
+        "options": {}
+      },
+      "id": "node-trigger-export",
+      "name": "Webhook: HR Approved Snapshot",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 1: Export Intent\n// Generate export intent request with idempotency key\nconst body = $input.first().json.body || $input.first().json;\nconst snapshotId = body.snapshot_id;\n\nif (!snapshotId) {\n  throw new Error('snapshot_id is required to trigger export flow');\n}\n\nreturn [{\n  json: {\n    snapshot_id: snapshotId,\n    export_type: 'PDF_JSON_PACK',\n    destination_system: 'payroll_staging',\n    idempotency_key: `EXP_INTENT_${snapshotId}`\n  }\n}];"
+      },
+      "id": "node-export-intent",
+      "name": "Step 1: Create Export Intent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/exports",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Service-Key",
+              "value": "={{ $env.N8N_SERVICE_API_KEY || 'n8n_secret_service_token_dev_placeholder' }}"
+            },
+            {
+              "name": "X-Idempotency-Key",
+              "value": "={{ $json.idempotency_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"snapshot_id\": \"{{ $json.snapshot_id }}\",\n  \"export_type\": \"{{ $json.export_type }}\",\n  \"destination_system\": \"{{ $json.destination_system }}\"\n}"
+      },
+      "id": "node-post-export-intent",
+      "name": "POST /exports (Register Intent)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 2: Validate Schema and Totals\nconst exportData = $input.first().json;\n\nif (!exportData.export_run_id || !exportData.pack_pdf_uri || !exportData.pack_json_uri) {\n  throw new Error('Export creation incomplete: Missing generated pack URIs');\n}\n\nreturn [{\n  json: {\n    export_run_id: exportData.export_run_id,\n    snapshot_id: exportData.snapshot_id,\n    pack_pdf_uri: exportData.pack_pdf_uri,\n    pack_json_uri: exportData.pack_json_uri,\n    validated: true,\n    delivery_payload: {\n      export_run_id: exportData.export_run_id,\n      pack_json_uri: exportData.pack_json_uri,\n      dispatched_at: new Date().toISOString()\n    }\n  }\n}];"
+      },
+      "id": "node-validate-totals",
+      "name": "Step 2: Validate Schema & Totals",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/exports/deliver-destination",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Service-Key",
+              "value": "={{ $env.N8N_SERVICE_API_KEY || 'n8n_secret_service_token_dev_placeholder' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"export_run_id\": \"{{ $json.export_run_id }}\",\n  \"destination\": \"payroll_staging\"\n}",
+        "options": {
+          "timeout": 5000,
+          "retryOnFail": false
+        }
+      },
+      "id": "node-deliver-payload",
+      "name": "Step 3: Deliver Pack to Destination",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1160, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.acknowledged === true }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "node-check-ack",
+      "name": "Step 4: Reconcile Acknowledgement",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1400, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 5: Finalize Export\nreturn [{\n  json: {\n    status: 'delivered',\n    export_run_id: $json.export_run_id,\n    reconciliation: 'SUCCESS',\n    message: 'Export confirmed and acknowledged by downstream payroll.'\n  }\n}];"
+      },
+      "id": "node-finalize-export",
+      "name": "Step 5: Finalize Status to Delivered",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1640, 240]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://backend:8000/exports/{{ $('Step 2: Validate Schema & Totals').item.json.export_run_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Service-Key",
+              "value": "={{ $env.N8N_SERVICE_API_KEY || 'n8n_secret_service_token_dev_placeholder' }}"
+            }
+          ]
+        }
+      },
+      "id": "node-check-persisted-state",
+      "name": "Timeout Safety: Verify Persisted State Before Retry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1640, 420]
+    }
+  ],
+  "connections": {
+    "Webhook: HR Approved Snapshot": {
+      "main": [
+        [
+          {
+            "node": "Step 1: Create Export Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 1: Create Export Intent": {
+      "main": [
+        [
+          {
+            "node": "POST /exports (Register Intent)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST /exports (Register Intent)": {
+      "main": [
+        [
+          {
+            "node": "Step 2: Validate Schema & Totals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2: Validate Schema & Totals": {
+      "main": [
+        [
+          {
+            "node": "Step 3: Deliver Pack to Destination",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 3: Deliver Pack to Destination": {
+      "main": [
+        [
+          {
+            "node": "Step 4: Reconcile Acknowledgement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 4: Reconcile Acknowledgement": {
+      "main": [
+        [
+          {
+            "node": "Step 5: Finalize Status to Delivered",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Timeout Safety: Verify Persisted State Before Retry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,6 @@
+source_record_id,employee_id,claim_date,category,amount,currency,receipt_reference,merchant_name,approval_state
+EXP_001,EMP001,2026-10-05,Meals,18.50,USD,s3://hr-receipts/rec_001.pdf,Subway,approved
+EXP_002,EMP001,2026-10-08,Meals,85.00,USD,,The Palm Steakhouse,pending
+EXP_003,EMP001,2026-10-12,Travel,120.00,USD,s3://hr-receipts/rec_003.pdf,Uber,pending
+EXP_004,EMP001,2026-10-12,Travel,120.00,USD,s3://hr-receipts/rec_003_dup.pdf,Uber,pending
+EXP_005,EMP001,2026-10-18,Supplies,350.00,USD,s3://hr-receipts/rec_005.pdf,BestBuy,pending

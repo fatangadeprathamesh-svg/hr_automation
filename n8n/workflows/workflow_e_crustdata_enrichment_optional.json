@@ -1,0 +1,159 @@
+{
+  "name": "HR Self-Audit - Workflow E: Optional Crustdata Enrichment (Sidecar)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "enrich-vendor",
+        "options": {}
+      },
+      "id": "node-trigger-enrichment",
+      "name": "Webhook: Request Vendor Enrichment",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $env.CRUSTDATA_ENABLED === 'true' }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "node-check-enrichment-enabled",
+      "name": "Is Crustdata Enabled?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract vendor or company domain\nconst body = $input.first().json.body || $input.first().json;\nconst vendor = body.vendor_name || body.company_domain || 'Unknown';\n\nreturn [{\n  json: {\n    vendor_query: vendor,\n    entity_type: 'vendor',\n    entity_id: body.expense_id || 'GENERAL'\n  }\n}];"
+      },
+      "id": "node-prepare-crustdata-query",
+      "name": "Prepare Search Query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 220]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.crustdata.com/screener/company?company_name={{ encodeURIComponent($json.vendor_query) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Token {{ $env.CRUSTDATA_API_KEY || 'crustdata_key_placeholder' }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 4000,
+          "retryOnFail": false
+        }
+      },
+      "id": "node-crustdata-api-call",
+      "name": "HTTP Request: Crustdata API Lookup",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "continueOnFail": true,
+      "position": [920, 220]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/enrichments",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Service-Key",
+              "value": "={{ $env.N8N_SERVICE_API_KEY || 'n8n_secret_service_token_dev_placeholder' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"entity_type\": \"{{ $('Prepare Search Query').item.json.entity_type }}\",\n  \"entity_id\": \"{{ $('Prepare Search Query').item.json.entity_id }}\",\n  \"provider\": \"crustdata\",\n  \"query_key\": \"{{ $('Prepare Search Query').item.json.vendor_query }}\",\n  \"provider_response\": {{ JSON.stringify($json) }},\n  \"review_status\": \"{{ $json.error ? 'unavailable' : 'unreviewed' }}\"\n}"
+      },
+      "id": "node-save-enrichment",
+      "name": "Save to external_enrichments Ledger",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1160, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Enrichment disabled by default: Skip gracefully without blocking\nreturn [{\n  json: {\n    status: 'skipped',\n    message: 'Crustdata enrichment branch is disabled by default. Core audit continues unaffected.'\n  }\n}];"
+      },
+      "id": "node-skip-disabled",
+      "name": "Skip Disabled Enrichment Branch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 420]
+    }
+  ],
+  "connections": {
+    "Webhook: Request Vendor Enrichment": {
+      "main": [
+        [
+          {
+            "node": "Is Crustdata Enabled?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Crustdata Enabled?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Search Query",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip Disabled Enrichment Branch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Search Query": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request: Crustdata API Lookup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request: Crustdata API Lookup": {
+      "main": [
+        [
+          {
+            "node": "Save to external_enrichments Ledger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

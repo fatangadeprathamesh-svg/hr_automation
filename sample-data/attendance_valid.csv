@@ -1,0 +1,5 @@
+source_record_id,employee_id,work_date,clock_in,clock_out,timezone,shift_id,approval_state
+ATT_001,EMP001,2026-10-01,2026-10-01T09:00:00-04:00,2026-10-01T17:30:00-04:00,America/New_York,STANDARD_DAY,approved
+ATT_002,EMP001,2026-10-02,2026-10-02T09:15:00-04:00,,America/New_York,STANDARD_DAY,approved
+ATT_003,EMP001,2026-10-03,2026-10-03T22:00:00-04:00,2026-10-04T06:00:00-04:00,America/New_York,NIGHT_SHIFT,approved
+ATT_004,MGR001,2026-10-01,2026-10-01T08:30:00-04:00,2026-10-01T17:00:00-04:00,America/New_York,STANDARD_DAY,approved

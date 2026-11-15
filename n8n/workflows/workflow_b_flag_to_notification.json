@@ -1,0 +1,156 @@
+{
+  "name": "HR Self-Audit - Workflow B: Flag to Notification",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "trigger-notification",
+        "options": {}
+      },
+      "id": "node-notification-webhook",
+      "name": "Webhook: Flag Detected",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Deduplication and Minimal Notification Sanitization\n// Non-negotiable Rule: ZERO salary, ZERO receipt images, ZERO sensitive attendance details\nconst input = $input.first().json.body || $input.first().json;\n\nconst employeeId = input.employee_id || 'UNKNOWN';\nconst period = input.period || 'current month';\nconst actionableCount = input.actionable_count || 1;\n\n// Generate deduplication fingerprint: hash of employee + period + count\nconst crypto = require('crypto');\nconst dedupFingerprint = crypto.createHash('md5').update(`${employeeId}_${period}_${actionableCount}`).digest('hex');\n\n// Minimal, privacy-safe message template per Spec Section 6\nconst safeMessage = `Your ${period} self-audit has ${actionableCount} item(s) requiring attention. Sign in to the HR portal to review the evidence and next steps.`;\nconst portalUrl = `https://portal.company.com/audit?period=${period}`;\n\nreturn [{\n  json: {\n    employee_id: employeeId,\n    period: period,\n    actionable_count: actionableCount,\n    dedup_fingerprint: dedupFingerprint,\n    message_body: safeMessage,\n    portal_url: portalUrl,\n    dispatched_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-sanitize-and-dedup",
+      "name": "Sanitize Message & Compute Fingerprint",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/notifications/check-dedup",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Service-Key",
+              "value": "={{ $env.N8N_SERVICE_API_KEY || 'n8n_secret_service_token_dev_placeholder' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"employee_id\": \"{{ $json.employee_id }}\",\n  \"fingerprint\": \"{{ $json.dedup_fingerprint }}\"\n}",
+        "options": {
+          "retryOnFail": false
+        }
+      },
+      "id": "node-check-dedup-api",
+      "name": "Check Backend Deduplication State",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.is_duplicate === false }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "node-filter-duplicates",
+      "name": "Is New / Changed Flag?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/notifications/dispatch",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Service-Key",
+              "value": "={{ $env.N8N_SERVICE_API_KEY || 'n8n_secret_service_token_dev_placeholder' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"employee_id\": \"{{ $('Sanitize Message & Compute Fingerprint').item.json.employee_id }}\",\n  \"fingerprint\": \"{{ $('Sanitize Message & Compute Fingerprint').item.json.dedup_fingerprint }}\",\n  \"message_body\": \"{{ $('Sanitize Message & Compute Fingerprint').item.json.message_body }}\",\n  \"portal_url\": \"{{ $('Sanitize Message & Compute Fingerprint').item.json.portal_url }}\"\n}"
+      },
+      "id": "node-dispatch-notification",
+      "name": "Dispatch Safe Notification & Record Delivery",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1140, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Duplicate notification suppressed to avoid employee alert spam\nreturn [{\n  json: {\n    status: 'suppressed_duplicate',\n    message: 'Flag notification identical to previous unresolved alert. Suppressed.'\n  }\n}];"
+      },
+      "id": "node-suppress-duplicate",
+      "name": "Suppress Duplicate Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 380]
+    }
+  ],
+  "connections": {
+    "Webhook: Flag Detected": {
+      "main": [
+        [
+          {
+            "node": "Sanitize Message & Compute Fingerprint",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize Message & Compute Fingerprint": {
+      "main": [
+        [
+          {
+            "node": "Check Backend Deduplication State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Backend Deduplication State": {
+      "main": [
+        [
+          {
+            "node": "Is New / Changed Flag?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is New / Changed Flag?": {
+      "main": [
+        [
+          {
+            "node": "Dispatch Safe Notification & Record Delivery",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Suppress Duplicate Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

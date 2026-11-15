@@ -1,0 +1,259 @@
+{
+  "name": "HR Self-Audit - Workflow A: Import to Audit",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "trigger-import",
+        "options": {}
+      },
+      "id": "node-trigger-webhook",
+      "name": "Webhook Trigger: Ingest Feed",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate source parameters and format payload\nconst body = $input.first().json.body || $input.first().json;\n\nif (!body.source_system || !body.covered_period || !body.file_content) {\n  throw new Error('Missing required ingestion parameters: source_system, covered_period, file_content');\n}\n\n// Generate deterministic idempotency key\nconst crypto = require('crypto');\nconst hash = crypto.createHash('sha256').update(`${body.source_system}_${body.covered_period}_${body.file_content.length}`).digest('hex');\n\nreturn [{\n  json: {\n    source_system: body.source_system,\n    covered_period: body.covered_period,\n    is_complete_feed: body.is_complete_feed !== false,\n    file_content: body.file_content,\n    idempotency_key: `IDEMP_${hash.substring(0, 16)}`\n  }\n}];"
+      },
+      "id": "node-validate-input",
+      "name": "Validate Input & Generate Idempotency Key",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/imports",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Service-Key",
+              "value": "={{ $env.N8N_SERVICE_API_KEY || 'n8n_secret_service_token_dev_placeholder' }}"
+            },
+            {
+              "name": "X-Idempotency-Key",
+              "value": "={{ $json.idempotency_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "source_system",
+              "value": "={{ $json.source_system }}"
+            },
+            {
+              "name": "covered_period",
+              "value": "={{ $json.covered_period }}"
+            },
+            {
+              "name": "is_complete_feed",
+              "value": "={{ String($json.is_complete_feed) }}"
+            },
+            {
+              "name": "file",
+              "value": "={{ $json.file_content }}"
+            }
+          ]
+        },
+        "options": {
+          "retryOnFail": true,
+          "maxTries": 3,
+          "waitBetweenTries": 1000
+        }
+      },
+      "id": "node-post-imports",
+      "name": "POST /imports to Backend Ledger",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.status === 'completed' }}",
+              "value2": true
+            },
+            {
+              "value1": "={{ $json.completeness_flag === true }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "node-check-import-status",
+      "name": "Import Complete & Verified?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [920, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/audit-runs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Service-Key",
+              "value": "={{ $env.N8N_SERVICE_API_KEY || 'n8n_secret_service_token_dev_placeholder' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"employee_id\": \"EMP001\",\n  \"period\": \"2026-10\",\n  \"trigger\": \"import_completed\"\n}",
+        "options": {
+          "retryOnFail": false
+        }
+      },
+      "id": "node-trigger-audit-run",
+      "name": "POST /audit-runs (Bounded Batch)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1160, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.blocking_count + $json.warning_count }}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "node-check-new-flags",
+      "name": "New Actionable Flags?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1380, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/trigger-notification",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"employee_id\": \"{{ $json.employee_id }}\",\n  \"period\": \"{{ $json.period }}\",\n  \"actionable_count\": {{ $json.blocking_count + $json.warning_count }},\n  \"blocking_count\": {{ $json.blocking_count }}\n}"
+      },
+      "id": "node-trigger-notification-workflow",
+      "name": "Call Workflow B: Safe Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1620, 140]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log audit success without flags\nreturn [{ json: { status: 'audit_completed_clean', message: 'No actionable flags detected.' } }];"
+      },
+      "id": "node-clean-audit-finish",
+      "name": "Finish Clean Audit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1620, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Incomplete or failed import: Log error and escalate to operations\nconst failureData = $input.first().json;\n\nreturn [{\n  json: {\n    alert_type: 'OPERATOR_ESCALATION',\n    severity: 'HIGH',\n    error: 'Source import failed or incomplete. Downstream audit halted.',\n    import_id: failureData.import_id,\n    completeness_flag: failureData.completeness_flag,\n    errors: failureData.errors || []\n  }\n}];"
+      },
+      "id": "node-escalate-failure",
+      "name": "Escalate Incomplete Feed & Halt Audit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1160, 420]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger: Ingest Feed": {
+      "main": [
+        [
+          {
+            "node": "Validate Input & Generate Idempotency Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input & Generate Idempotency Key": {
+      "main": [
+        [
+          {
+            "node": "POST /imports to Backend Ledger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST /imports to Backend Ledger": {
+      "main": [
+        [
+          {
+            "node": "Import Complete & Verified?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import Complete & Verified?": {
+      "main": [
+        [
+          {
+            "node": "POST /audit-runs (Bounded Batch)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Escalate Incomplete Feed & Halt Audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST /audit-runs (Bounded Batch)": {
+      "main": [
+        [
+          {
+            "node": "New Actionable Flags?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New Actionable Flags?": {
+      "main": [
+        [
+          {
+            "node": "Call Workflow B: Safe Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Finish Clean Audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

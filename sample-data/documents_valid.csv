@@ -1,0 +1,5 @@
+source_record_id,employee_id,document_type,document_reference,issue_date,expiry_date,verification_status
+DOC_001,EMP001,passport,USA-PASS-882190,2021-05-10,2031-05-10,verified
+DOC_002,EMP001,driver_license,DL-NY-9921004,2022-11-20,2026-11-15,verified
+DOC_003,EMP001,work_permit,WP-US-7711902,2023-01-01,2026-09-30,verified
+DOC_004,MGR001,passport,USA-PASS-110299,2020-04-12,2030-04-12,verified

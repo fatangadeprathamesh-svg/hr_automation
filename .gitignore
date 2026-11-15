@@ -1,0 +1,29 @@
+# Python
+backend/venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+*.db
+*.db-journal
+
+# Node
+frontend/node_modules/
+node_modules/
+frontend/dist/
+dist/
+.npm
+npm-debug.log*
+
+# Environment and secrets
+.env
+backend/.env
+frontend/.env
+*.local
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

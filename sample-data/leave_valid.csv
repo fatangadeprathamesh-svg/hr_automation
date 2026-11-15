@@ -1,0 +1,3 @@
+source_record_id,employee_id,leave_type,start_date,end_date,days_taken,approval_state
+LEV_001,EMP001,annual,2026-10-15,2026-10-15,1.0,approved
+LEV_002,EMP001,sick,2026-10-20,2026-10-20,1.0,approved

@@ -1,0 +1,240 @@
+{
+  "snapshot_id": "e9de4e23-6221-46aa-800d-663a849d41d6",
+  "period": "2026-10",
+  "frozen_at": "2026-11-15T07:28:21.751298+00:00",
+  "employee": {
+    "employee_id": "EMP001",
+    "full_name": "Alice Employee",
+    "organization_id": "ORG_DEMO_01",
+    "timezone": "America/New_York"
+  },
+  "policy_version": "POLICY-2026.1",
+  "audit_summary": {
+    "audit_run_id": "8aeb86d3-5092-4e7c-953f-19172920ee8e",
+    "blocking_count": 0,
+    "warning_count": 0,
+    "data_health": "complete",
+    "status": "APPROVED_READY_FOR_PAYROLL"
+  },
+  "source_coverage": {
+    "attendance": "complete",
+    "leave": "complete",
+    "timesheets": "complete",
+    "expense_claims": "complete",
+    "documents": "complete"
+  },
+  "audit_flags": [
+    {
+      "flag_id": "2390cbbe-3903-4109-8bc6-617f0ab46eaf",
+      "rule_id": "MISSING_PUNCH",
+      "rule_version": "1.0",
+      "status": "pass",
+      "severity": "info",
+      "evidence": {
+        "record_id": "ATT_001",
+        "work_date": "2026-10-01",
+        "duration_hours": 8.5
+      },
+      "policy_version": "POLICY-2026.1",
+      "suggested_action": null,
+      "resolution_status": "resolved"
+    },
+    {
+      "flag_id": "8f3094ba-ef61-4ccb-a0d2-64b69793a58e",
+      "rule_id": "MISSING_PUNCH",
+      "rule_version": "1.0",
+      "status": "pass",
+      "severity": "info",
+      "evidence": {
+        "record_id": "ATT_002",
+        "work_date": "2026-10-02",
+        "duration_hours": 8.25
+      },
+      "policy_version": "POLICY-2026.1",
+      "suggested_action": null,
+      "resolution_status": "resolved"
+    },
+    {
+      "flag_id": "a19709ff-11a5-46dd-8d17-b9e05649c344",
+      "rule_id": "MISSING_PUNCH",
+      "rule_version": "1.0",
+      "status": "pass",
+      "severity": "info",
+      "evidence": {
+        "record_id": "ATT_003",
+        "work_date": "2026-10-03",
+        "duration_hours": 8.0
+      },
+      "policy_version": "POLICY-2026.1",
+      "suggested_action": null,
+      "resolution_status": "resolved"
+    },
+    {
+      "flag_id": "7889cc92-f904-423a-a90c-741fa6ef100d",
+      "rule_id": "HOURS_MISMATCH",
+      "rule_version": "1.0",
+      "status": "pass",
+      "severity": "info",
+      "evidence": {
+        "record_id": "TS_001",
+        "entity_id": "0b85af4b-acda-42e2-9f8e-cb3fce6ae1e2",
+        "work_date": "2026-10-01",
+        "timesheet_hours": 8.5,
+        "punch_hours": 8.5,
+        "delta_minutes": 0.0,
+        "tolerance_minutes": 30.0
+      },
+      "policy_version": "POLICY-2026.1",
+      "suggested_action": null,
+      "resolution_status": "resolved"
+    },
+    {
+      "flag_id": "740566e7-42ab-4eb9-ab07-3593808212ed",
+      "rule_id": "HOURS_MISMATCH",
+      "rule_version": "1.0",
+      "status": "pass",
+      "severity": "info",
+      "evidence": {
+        "record_id": "TS_002",
+        "entity_id": "9ae810e6-5470-42ea-8cde-2c5f49aa8d47",
+        "work_date": "2026-10-02",
+        "timesheet_hours": 8.0,
+        "punch_hours": 8.25,
+        "delta_minutes": 15.0,
+        "tolerance_minutes": 30.0
+      },
+      "policy_version": "POLICY-2026.1",
+      "suggested_action": null,
+      "resolution_status": "resolved"
+    },
+    {
+      "flag_id": "cbe75b85-1bd5-4bd7-a2a3-d4c2fba3991a",
+      "rule_id": "HOURS_MISMATCH",
+      "rule_version": "1.0",
+      "status": "pass",
+      "severity": "info",
+      "evidence": {
+        "record_id": "TS_003",
+        "entity_id": "996b0b9e-796b-47bd-abba-0af511253912",
+        "work_date": "2026-10-03",
+        "timesheet_hours": 8.0,
+        "punch_hours": 8.0,
+        "delta_minutes": 0.0,
+        "tolerance_minutes": 30.0
+      },
+      "policy_version": "POLICY-2026.1",
+      "suggested_action": null,
+      "resolution_status": "resolved"
+    },
+    {
+      "flag_id": "7c4d1c70-8652-4336-a05c-5611ec9dc89a",
+      "rule_id": "MISSING_RECEIPT",
+      "rule_version": "1.0",
+      "status": "not_applicable",
+      "severity": "info",
+      "evidence": {
+        "record_id": "EXP_001",
+        "amount": 18.5,
+        "threshold": 25.0,
+        "message": "Receipt not required for claims under 25.00."
+      },
+      "policy_version": "POLICY-2026.1",
+      "suggested_action": null,
+      "resolution_status": "resolved"
+    },
+    {
+      "flag_id": "89b9eedd-cf2b-4db0-8510-3fa76ae66f74",
+      "rule_id": "MISSING_RECEIPT",
+      "rule_version": "1.0",
+      "status": "pass",
+      "severity": "info",
+      "evidence": {
+        "record_id": "EXP_002",
+        "amount": 85.0,
+        "currency": "USD",
+        "category": "Meals",
+        "receipt_reference": "s3://hr-receipts/palm_receipt_rec_002.pdf"
+      },
+      "policy_version": "POLICY-2026.1",
+      "suggested_action": null,
+      "resolution_status": "resolved"
+    },
+    {
+      "flag_id": "5d41e45d-9654-4ee3-a274-0fd35fc40a72",
+      "rule_id": "MISSING_RECEIPT",
+      "rule_version": "1.0",
+      "status": "pass",
+      "severity": "info",
+      "evidence": {
+        "record_id": "EXP_003",
+        "amount": 120.0,
+        "currency": "USD",
+        "category": "Travel",
+        "receipt_reference": "s3://hr-receipts/rec_003.pdf"
+      },
+      "policy_version": "POLICY-2026.1",
+      "suggested_action": null,
+      "resolution_status": "resolved"
+    },
+    {
+      "flag_id": "a8705a5f-6965-4d5e-816d-b1bddf864c5c",
+      "rule_id": "MISSING_RECEIPT",
+      "rule_version": "1.0",
+      "status": "pass",
+      "severity": "info",
+      "evidence": {
+        "record_id": "EXP_004",
+        "amount": 120.0,
+        "currency": "USD",
+        "category": "Travel",
+        "receipt_reference": "s3://hr-receipts/rec_003_dup.pdf"
+      },
+      "policy_version": "POLICY-2026.1",
+      "suggested_action": null,
+      "resolution_status": "resolved"
+    },
+    {
+      "flag_id": "74226515-eff9-41ff-984b-4cd65c85805b",
+      "rule_id": "MISSING_RECEIPT",
+      "rule_version": "1.0",
+      "status": "pass",
+      "severity": "info",
+      "evidence": {
+        "record_id": "EXP_005",
+        "amount": 350.0,
+        "currency": "USD",
+        "category": "Supplies",
+        "receipt_reference": "s3://hr-receipts/rec_005.pdf"
+      },
+      "policy_version": "POLICY-2026.1",
+      "suggested_action": null,
+      "resolution_status": "resolved"
+    }
+  ],
+  "approval_history": [
+    {
+      "approval_id": "83752620-95f1-4e89-8048-de086b4e0d17",
+      "correction_id": "972ed1c5-eb7b-4731-808a-e6616f19b286",
+      "entity_name": "expense_claim",
+      "entity_id": "EXP_002",
+      "reviewer_id": "MGR001",
+      "bound_record_version": 1,
+      "bound_policy_version": "POLICY-2026.1",
+      "decision": "approved",
+      "manager_reason": "Verified and approved with employee log.",
+      "decided_at": "2026-11-15 07:28:20.119357"
+    },
+    {
+      "approval_id": "fe136426-d1b3-4aab-a892-49992d90f315",
+      "correction_id": "9e7f977e-7453-458f-92dd-343d513c5341",
+      "entity_name": "attendance",
+      "entity_id": "ATT_002",
+      "reviewer_id": "MGR001",
+      "bound_record_version": 1,
+      "bound_policy_version": "POLICY-2026.1",
+      "decision": "approved",
+      "manager_reason": "Verified and approved with employee log.",
+      "decided_at": "2026-11-15 07:28:20.479903"
+    }
+  ]
+}

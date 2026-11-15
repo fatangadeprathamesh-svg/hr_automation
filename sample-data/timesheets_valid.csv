@@ -1,0 +1,5 @@
+source_record_id,employee_id,work_date,regular_hours,overtime_hours,approval_state
+TS_001,EMP001,2026-10-01,8.0,0.5,approved
+TS_002,EMP001,2026-10-02,8.0,0.0,approved
+TS_003,EMP001,2026-10-03,8.0,0.0,approved
+TS_004,MGR001,2026-10-01,8.0,0.0,approved

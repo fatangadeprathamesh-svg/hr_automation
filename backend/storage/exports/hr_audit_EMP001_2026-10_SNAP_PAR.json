@@ -1,0 +1,43 @@
+{
+  "snapshot_id": "SNAP_PARITY_TEST_01",
+  "period": "2026-10",
+  "frozen_at": "2026-11-15T11:13:22.056021+00:00",
+  "employee": {
+    "employee_id": "EMP001",
+    "full_name": "Alice Employee",
+    "organization_id": "ORG_DEMO_01",
+    "timezone": "America/New_York"
+  },
+  "policy_version": "POLICY-2026.1",
+  "audit_summary": {
+    "audit_run_id": "AUD-TEST-PARITY",
+    "blocking_count": 0,
+    "warning_count": 0,
+    "data_health": "complete",
+    "status": "APPROVED_READY_FOR_PAYROLL"
+  },
+  "source_coverage": {
+    "attendance": "complete",
+    "timesheets": "complete",
+    "expense_claims": "complete"
+  },
+  "audit_flags": [
+    {
+      "rule_id": "MISSING_PUNCH",
+      "status": "pass",
+      "severity": "info",
+      "policy_version": "POLICY-2026.1",
+      "resolution_status": "resolved"
+    }
+  ],
+  "approval_history": [
+    {
+      "entity_name": "attendance",
+      "bound_record_version": 1,
+      "reviewer_id": "MGR001",
+      "decision": "approved",
+      "manager_reason": "Confirmed work hours",
+      "decided_at": "2026-10-03T18:00:00Z"
+    }
+  ]
+}

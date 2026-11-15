@@ -1,0 +1,4 @@
+employee_id,organization_id,email,full_name,manager_id,timezone,hire_date,is_active
+EMP001,ORG_DEMO_01,alice@example.com,Alice Employee,MGR001,America/New_York,2025-01-15,true
+MGR001,ORG_DEMO_01,bob.manager@example.com,Bob Manager,,America/New_York,2024-03-01,true
+HR001,ORG_DEMO_01,carol.hr@example.com,Carol HR Admin,,America/New_York,2023-06-01,true

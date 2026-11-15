@@ -1,0 +1,131 @@
+{
+  "name": "HR Self-Audit - Workflow C: Correction to Manager Decision & Re-Audit",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "correction-submitted",
+        "options": {}
+      },
+      "id": "node-correction-webhook",
+      "name": "Webhook: Correction Submitted",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract correction event and format manager review notification\nconst body = $input.first().json.body || $input.first().json;\n\nreturn [{\n  json: {\n    correction_id: body.correction_id,\n    employee_id: body.employee_id,\n    entity_name: body.entity_name,\n    entity_id: body.entity_id,\n    bound_record_version: body.bound_record_version,\n    manager_notification: `Correction submitted by ${body.employee_id} for ${body.entity_name}. Please sign in to the portal to review the before/after diff.`\n  }\n}];"
+      },
+      "id": "node-format-manager-alert",
+      "name": "Format Manager Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "decision-recorded",
+        "options": {}
+      },
+      "id": "node-decision-webhook",
+      "name": "Webhook: Manager Decision Recorded",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 480]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.decision || $json.decision }}",
+              "value2": "approved"
+            }
+          ]
+        }
+      },
+      "id": "node-check-approved",
+      "name": "Was Correction Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [440, 480]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/audit-runs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Service-Key",
+              "value": "={{ $env.N8N_SERVICE_API_KEY || 'n8n_secret_service_token_dev_placeholder' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"employee_id\": \"{{ $json.body.employee_id || $json.employee_id }}\",\n  \"period\": \"{{ $json.body.period || '2026-10' }}\",\n  \"trigger\": \"correction_approved\"\n}"
+      },
+      "id": "node-trigger-reaudit",
+      "name": "Trigger Re-Audit & Refresh Readiness",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log rejected correction without triggering re-audit\nreturn [{\n  json: {\n    status: 'correction_rejected',\n    correction_id: $json.body?.correction_id || $json.correction_id,\n    message: 'Correction was rejected by manager. Audit state preserved.'\n  }\n}];"
+      },
+      "id": "node-finish-rejection",
+      "name": "Record Rejection Outcome",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 560]
+    }
+  ],
+  "connections": {
+    "Webhook: Correction Submitted": {
+      "main": [
+        [
+          {
+            "node": "Format Manager Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: Manager Decision Recorded": {
+      "main": [
+        [
+          {
+            "node": "Was Correction Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Was Correction Approved?": {
+      "main": [
+        [
+          {
+            "node": "Trigger Re-Audit & Refresh Readiness",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Record Rejection Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

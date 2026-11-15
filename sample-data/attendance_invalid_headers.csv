@@ -1,0 +1,2 @@
+source_record_id,employee_id,clock_in,clock_out,timezone
+ATT_BAD_01,EMP001,2026-10-01T09:00:00-04:00,2026-10-01T17:00:00-04:00,America/New_York
