@@ -9,6 +9,7 @@ from app.models.hr import (
     Timesheet,
     ExpenseClaim,
     Document,
+    Correction,
     PolicyVersion,
     AuditRun,
     AuditFlag,
@@ -18,6 +19,12 @@ from app.rules.base import BaseRule, RuleResult, RuleOutcome, RuleSeverity
 from app.rules.missing_punch import MissingPunchRule
 from app.rules.hours_mismatch import HoursMismatchRule
 from app.rules.missing_receipt import MissingReceiptRule
+from app.rules.leave_conflict import LeaveConflictRule
+from app.rules.duplicate_claim import DuplicateClaimRule
+from app.rules.over_limit_claim import OverLimitClaimRule
+from app.rules.unapproved_overtime import UnapprovedOvertimeRule
+from app.rules.pending_approvals import PendingApprovalsRule
+from app.rules.expiring_documents import ExpiringDocumentsRule
 
 DEFAULT_POLICY_VERSION = "POLICY-2026.1"
 DEFAULT_POLICY_CONFIG = {
@@ -29,6 +36,33 @@ DEFAULT_POLICY_CONFIG = {
     },
     "missing_receipt": {
         "receipt_required_threshold": 25.0,
+    },
+    "leave_conflict": {
+        "half_day_tolerance_hours": 4.5,
+    },
+    "duplicate_claim": {
+        "match_receipt_reference": True,
+        "match_date_amount_merchant": True,
+    },
+    "over_limit_claim": {
+        "category_limits": {
+            "meals": 75.0,
+            "travel": 500.0,
+            "supplies": 200.0,
+            "training": 1000.0,
+            "lodging": 350.0,
+            "transport": 100.0,
+        },
+        "default_limit": 300.0,
+    },
+    "unapproved_overtime": {
+        "standard_daily_hours": 8.0,
+        "overtime_blocking_threshold": 12.0,
+    },
+    "pending_approvals": {},
+    "expiring_documents": {
+        "warning_days": 60,
+        "blocking_days": 30,
     },
 }
 
@@ -52,6 +86,12 @@ class AuditEngine:
                 MissingPunchRule(),
                 HoursMismatchRule(),
                 MissingReceiptRule(),
+                LeaveConflictRule(),
+                DuplicateClaimRule(),
+                OverLimitClaimRule(),
+                UnapprovedOvertimeRule(),
+                PendingApprovalsRule(),
+                ExpiringDocumentsRule(),
             ]
         else:
             self.rules = rules
@@ -68,6 +108,14 @@ class AuditEngine:
                 is_active=True,
             )
             db.add(policy)
+            db.commit()
+            db.refresh(policy)
+        else:
+            # Ensure any new default rule configuration sections exist
+            merged_config = dict(DEFAULT_POLICY_CONFIG)
+            if policy.rule_configurations:
+                merged_config.update(policy.rule_configurations)
+            policy.rule_configurations = merged_config
             db.commit()
             db.refresh(policy)
         return policy
@@ -112,6 +160,14 @@ class AuditEngine:
             ExpenseClaim.claim_date < end_d,
         ).all()
 
+        document_records = db.query(Document).filter(
+            Document.employee_id == employee_id,
+        ).all()
+
+        correction_records = db.query(Correction).filter(
+            Correction.employee_id == employee_id,
+        ).all()
+
         # Check source feed completeness for this period
         imports = db.query(SourceImport).filter(
             SourceImport.covered_period == period
@@ -129,6 +185,8 @@ class AuditEngine:
             "leave": leave_records,
             "timesheets": timesheet_records,
             "expense_claims": expense_records,
+            "documents": document_records,
+            "corrections": correction_records,
             "attendance_feed_complete": is_attendance_feed_complete,
         }
 
