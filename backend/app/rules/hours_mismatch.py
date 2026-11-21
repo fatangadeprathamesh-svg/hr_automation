@@ -45,8 +45,33 @@ class HoursMismatchRule(BaseRule):
 
         for ts in timesheets:
             work_date = ts.work_date
-            ts_hours = float(ts.regular_hours or 0.0) + float(ts.overtime_hours or 0.0)
+            reg_hrs = float(ts.regular_hours or 0.0)
+            ot_hrs = float(ts.overtime_hours or 0.0)
             date_str = str(work_date)
+
+            # Corrupted negative timesheet hours -> Data health issue (UNKNOWN)
+            if reg_hrs < 0 or ot_hrs < 0:
+                results.append(
+                    RuleResult(
+                        rule_id=self.rule_id,
+                        rule_version=self.rule_version,
+                        status=RuleOutcome.UNKNOWN,
+                        severity=RuleSeverity.WARNING,
+                        evidence={
+                            "record_id": getattr(ts, "source_record_id", None) or getattr(ts, "id", "UNKNOWN"),
+                            "work_date": date_str,
+                            "regular_hours": reg_hrs,
+                            "overtime_hours": ot_hrs,
+                            "data_health_issue": "NEGATIVE_TIMESHEET_HOURS",
+                        },
+                        policy_version=policy_version,
+                        suggested_action="Investigate corrupted negative timesheet hours in upstream source feed.",
+                        is_data_health_issue=True,
+                    )
+                )
+                continue
+
+            ts_hours = reg_hrs + ot_hrs
 
             day_punches = attendance_by_date.get(work_date, [])
 

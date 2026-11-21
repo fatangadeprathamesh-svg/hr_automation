@@ -1,0 +1,334 @@
+{
+  "version": "1.0",
+  "generated_at": "2026-11-21T00:00:00Z",
+  "dataset_description": "Labeled ground-truth benchmark test set for all 9 deterministic Month-End HR self-audit rules.",
+  "cases": [
+    {
+      "case_id": "MP-001",
+      "rule_id": "MISSING_PUNCH",
+      "description": "Standard 8.5h shift with valid paired clock-in and clock-out punches.",
+      "input_data": {
+        "attendance": [
+          {"work_date": "2026-10-01", "clock_in": "2026-10-01T09:00:00Z", "clock_out": "2026-10-01T17:30:00Z", "source_record_id": "ATT-MP-1"}
+        ],
+        "attendance_feed_complete": true
+      },
+      "expected_outcome": "pass",
+      "expected_severity": "info"
+    },
+    {
+      "case_id": "MP-002",
+      "rule_id": "MISSING_PUNCH",
+      "description": "Clock-in recorded but clock-out is null (missing exit punch).",
+      "input_data": {
+        "attendance": [
+          {"work_date": "2026-10-02", "clock_in": "2026-10-02T09:00:00Z", "clock_out": null, "source_record_id": "ATT-MP-2"}
+        ],
+        "attendance_feed_complete": true
+      },
+      "expected_outcome": "fail",
+      "expected_severity": "blocking"
+    },
+    {
+      "case_id": "MP-003",
+      "rule_id": "MISSING_PUNCH",
+      "description": "Clock-out recorded but clock-in is null (missing entry punch).",
+      "input_data": {
+        "attendance": [
+          {"work_date": "2026-10-03", "clock_in": null, "clock_out": "2026-10-03T17:00:00Z", "source_record_id": "ATT-MP-3"}
+        ],
+        "attendance_feed_complete": true
+      },
+      "expected_outcome": "fail",
+      "expected_severity": "blocking"
+    },
+    {
+      "case_id": "MP-004",
+      "rule_id": "MISSING_PUNCH",
+      "description": "Overnight shift starting 21:00 and ending 05:30 next morning.",
+      "input_data": {
+        "attendance": [
+          {"work_date": "2026-10-04", "clock_in": "2026-10-04T21:00:00Z", "clock_out": "2026-10-05T05:30:00Z", "source_record_id": "ATT-MP-4"}
+        ],
+        "attendance_feed_complete": true
+      },
+      "expected_outcome": "pass",
+      "expected_severity": "info"
+    },
+    {
+      "case_id": "MP-005",
+      "rule_id": "MISSING_PUNCH",
+      "description": "Incomplete upstream attendance feed marks missing punch as data health issue.",
+      "input_data": {
+        "attendance": [],
+        "attendance_feed_complete": false
+      },
+      "expected_outcome": "unknown",
+      "expected_severity": "warning",
+      "is_data_health": true
+    },
+
+    {
+      "case_id": "HM-001",
+      "rule_id": "HOURS_MISMATCH",
+      "description": "Timesheet hours (8.0h) matches badge presence (8.2h) within 30m tolerance.",
+      "input_data": {
+        "attendance": [{"work_date": "2026-10-01", "clock_in": "2026-10-01T09:00:00Z", "clock_out": "2026-10-01T17:12:00Z", "source_record_id": "ATT-HM-1"}],
+        "timesheets": [{"work_date": "2026-10-01", "regular_hours": 8.0, "source_record_id": "TS-HM-1"}]
+      },
+      "expected_outcome": "pass",
+      "expected_severity": "info"
+    },
+    {
+      "case_id": "HM-002",
+      "rule_id": "HOURS_MISMATCH",
+      "description": "Timesheet claims 9.5h while badge shows 6.5h (180 min variance > 30m).",
+      "input_data": {
+        "attendance": [{"work_date": "2026-10-02", "clock_in": "2026-10-02T09:00:00Z", "clock_out": "2026-10-02T15:30:00Z", "source_record_id": "ATT-HM-2"}],
+        "timesheets": [{"work_date": "2026-10-02", "regular_hours": 9.5, "source_record_id": "TS-HM-2"}]
+      },
+      "expected_outcome": "fail",
+      "expected_severity": "blocking"
+    },
+    {
+      "case_id": "HM-003",
+      "rule_id": "HOURS_MISMATCH",
+      "description": "Corrupted negative timesheet regular hours returns UNKNOWN.",
+      "input_data": {
+        "attendance": [{"work_date": "2026-10-03", "clock_in": "2026-10-03T09:00:00Z", "clock_out": "2026-10-03T17:00:00Z", "source_record_id": "ATT-HM-3"}],
+        "timesheets": [{"work_date": "2026-10-03", "regular_hours": -4.0, "source_record_id": "TS-HM-3"}]
+      },
+      "expected_outcome": "unknown",
+      "expected_severity": "warning",
+      "is_data_health": true
+    },
+
+    {
+      "case_id": "MR-001",
+      "rule_id": "MISSING_RECEIPT",
+      "description": "Expense claim under $25 ($18.50) without receipt is not required.",
+      "input_data": {
+        "expense_claims": [{"amount": 18.50, "claim_date": "2026-10-05", "category": "meals", "receipt_reference": null, "source_record_id": "EXP-MR-1"}]
+      },
+      "expected_outcome": "not_applicable",
+      "expected_severity": "info"
+    },
+    {
+      "case_id": "MR-002",
+      "rule_id": "MISSING_RECEIPT",
+      "description": "Expense claim of $84.50 with attached receipt reference.",
+      "input_data": {
+        "expense_claims": [{"amount": 84.50, "claim_date": "2026-10-06", "category": "meals", "receipt_reference": "s3://receipts/rec-01.jpg", "source_record_id": "EXP-MR-2"}]
+      },
+      "expected_outcome": "pass",
+      "expected_severity": "info"
+    },
+    {
+      "case_id": "MR-003",
+      "rule_id": "MISSING_RECEIPT",
+      "description": "Expense claim of $84.50 missing required receipt reference.",
+      "input_data": {
+        "expense_claims": [{"amount": 84.50, "claim_date": "2026-10-07", "category": "meals", "receipt_reference": null, "source_record_id": "EXP-MR-3"}]
+      },
+      "expected_outcome": "fail",
+      "expected_severity": "blocking"
+    },
+    {
+      "case_id": "MR-004",
+      "rule_id": "MISSING_RECEIPT",
+      "description": "Negative expense claim amount (-$20.00) indicates corrupted data.",
+      "input_data": {
+        "expense_claims": [{"amount": -20.00, "claim_date": "2026-10-08", "category": "meals", "receipt_reference": null, "source_record_id": "EXP-MR-4"}]
+      },
+      "expected_outcome": "unknown",
+      "expected_severity": "warning",
+      "is_data_health": true
+    },
+
+    {
+      "case_id": "LC-001",
+      "rule_id": "LEAVE_CONFLICT",
+      "description": "Approved annual leave day with no work attendance or timesheet hours logged.",
+      "input_data": {
+        "leave": [{"start_date": "2026-10-15", "end_date": "2026-10-15", "days_taken": 1.0, "leave_type": "annual", "approval_state": "approved", "source_record_id": "LV-LC-1"}],
+        "attendance": [],
+        "timesheets": []
+      },
+      "expected_outcome": "pass",
+      "expected_severity": "info"
+    },
+    {
+      "case_id": "LC-002",
+      "rule_id": "LEAVE_CONFLICT",
+      "description": "Approved full-day leave with physical attendance punch on same date.",
+      "input_data": {
+        "leave": [{"start_date": "2026-10-16", "end_date": "2026-10-16", "days_taken": 1.0, "leave_type": "sick", "approval_state": "approved", "source_record_id": "LV-LC-2"}],
+        "attendance": [{"work_date": "2026-10-16", "clock_in": "2026-10-16T09:00:00Z", "clock_out": "2026-10-16T17:00:00Z", "source_record_id": "ATT-LC-2"}],
+        "timesheets": []
+      },
+      "expected_outcome": "fail",
+      "expected_severity": "blocking"
+    },
+    {
+      "case_id": "LC-003",
+      "rule_id": "LEAVE_CONFLICT",
+      "description": "Approved half-day leave with timesheet hours exceeding 4.5h threshold (6.0h).",
+      "input_data": {
+        "leave": [{"start_date": "2026-10-17", "end_date": "2026-10-17", "days_taken": 0.5, "leave_type": "personal", "approval_state": "approved", "source_record_id": "LV-LC-3"}],
+        "attendance": [],
+        "timesheets": [{"work_date": "2026-10-17", "regular_hours": 6.0, "source_record_id": "TS-LC-3"}]
+      },
+      "expected_outcome": "fail",
+      "expected_severity": "warning"
+    },
+
+    {
+      "case_id": "DC-001",
+      "rule_id": "DUPLICATE_CLAIM",
+      "description": "Two distinct claims with unique amounts, merchants, and receipt references.",
+      "input_data": {
+        "expense_claims": [
+          {"claim_date": "2026-10-10", "amount": 40.0, "category": "meals", "merchant_name": "Deli A", "receipt_reference": "R-101", "source_record_id": "EXP-DC-1"},
+          {"claim_date": "2026-10-11", "amount": 65.0, "category": "travel", "merchant_name": "Transit B", "receipt_reference": "R-102", "source_record_id": "EXP-DC-2"}
+        ]
+      },
+      "expected_outcome": "pass",
+      "expected_severity": "info"
+    },
+    {
+      "case_id": "DC-002",
+      "rule_id": "DUPLICATE_CLAIM",
+      "description": "Identical receipt reference shared across two different claim records.",
+      "input_data": {
+        "expense_claims": [
+          {"claim_date": "2026-10-12", "amount": 50.0, "category": "meals", "receipt_reference": "DUP-REC-99", "source_record_id": "EXP-DC-3"},
+          {"claim_date": "2026-10-13", "amount": 50.0, "category": "meals", "receipt_reference": "DUP-REC-99", "source_record_id": "EXP-DC-4"}
+        ]
+      },
+      "expected_outcome": "fail",
+      "expected_severity": "blocking"
+    },
+
+    {
+      "case_id": "OL-001",
+      "rule_id": "OVER_LIMIT_CLAIM",
+      "description": "Claim of $55.00 for meals within policy cap of $75.00.",
+      "input_data": {
+        "expense_claims": [{"amount": 55.0, "category": "meals", "claim_date": "2026-10-05", "source_record_id": "EXP-OL-1"}]
+      },
+      "expected_outcome": "pass",
+      "expected_severity": "info"
+    },
+    {
+      "case_id": "OL-002",
+      "rule_id": "OVER_LIMIT_CLAIM",
+      "description": "Claim of $110.00 for meals exceeding policy cap of $75.00.",
+      "input_data": {
+        "expense_claims": [{"amount": 110.0, "category": "meals", "claim_date": "2026-10-06", "source_record_id": "EXP-OL-2"}]
+      },
+      "expected_outcome": "fail",
+      "expected_severity": "blocking"
+    },
+
+    {
+      "case_id": "OT-001",
+      "rule_id": "UNAPPROVED_OVERTIME",
+      "description": "Standard 8.0 regular hours with 0 overtime.",
+      "input_data": {
+        "timesheets": [{"work_date": "2026-10-01", "regular_hours": 8.0, "overtime_hours": 0.0, "approval_state": "approved", "source_record_id": "TS-OT-1"}]
+      },
+      "expected_outcome": "pass",
+      "expected_severity": "info"
+    },
+    {
+      "case_id": "OT-002",
+      "rule_id": "UNAPPROVED_OVERTIME",
+      "description": "Overtime hours (2.0h) with pending manager approval.",
+      "input_data": {
+        "timesheets": [{"work_date": "2026-10-02", "regular_hours": 8.0, "overtime_hours": 2.0, "approval_state": "pending", "source_record_id": "TS-OT-2"}]
+      },
+      "expected_outcome": "fail",
+      "expected_severity": "warning"
+    },
+    {
+      "case_id": "OT-003",
+      "rule_id": "UNAPPROVED_OVERTIME",
+      "description": "Excessive work hours exceeding 12.0h blocking threshold (13.5h).",
+      "input_data": {
+        "timesheets": [{"work_date": "2026-10-03", "regular_hours": 8.0, "overtime_hours": 5.5, "approval_state": "approved", "source_record_id": "TS-OT-3"}]
+      },
+      "expected_outcome": "fail",
+      "expected_severity": "blocking"
+    },
+
+    {
+      "case_id": "PA-001",
+      "rule_id": "PENDING_APPROVALS",
+      "description": "All timesheets, expenses, and corrections are approved.",
+      "input_data": {
+        "timesheets": [{"approval_state": "approved", "source_record_id": "TS-PA-1"}],
+        "expense_claims": [{"approval_state": "approved", "source_record_id": "EXP-PA-1"}],
+        "corrections": [{"status": "approved", "correction_id": "CORR-PA-1"}]
+      },
+      "expected_outcome": "pass",
+      "expected_severity": "info"
+    },
+    {
+      "case_id": "PA-002",
+      "rule_id": "PENDING_APPROVALS",
+      "description": "Correction remains in pending_review status.",
+      "input_data": {
+        "timesheets": [{"approval_state": "approved", "source_record_id": "TS-PA-2"}],
+        "expense_claims": [],
+        "corrections": [{"status": "pending_review", "correction_id": "CORR-PA-2"}]
+      },
+      "expected_outcome": "fail",
+      "expected_severity": "blocking"
+    },
+
+    {
+      "case_id": "ED-001",
+      "rule_id": "EXPIRING_DOCUMENTS",
+      "description": "Passport with expiration date 180 days in future.",
+      "input_data": {
+        "documents": [{"document_type": "passport", "document_reference": "P-VALID", "expiry_date": "2027-05-01", "source_record_id": "DOC-ED-1"}],
+        "reference_date": "2026-10-31"
+      },
+      "expected_outcome": "pass",
+      "expected_severity": "info"
+    },
+    {
+      "case_id": "ED-002",
+      "rule_id": "EXPIRING_DOCUMENTS",
+      "description": "Work permit expiring in 45 days (warning window 31-60d).",
+      "input_data": {
+        "documents": [{"document_type": "work_permit", "document_reference": "WP-WARN", "expiry_date": "2026-12-15", "source_record_id": "DOC-ED-2"}],
+        "reference_date": "2026-10-31"
+      },
+      "expected_outcome": "fail",
+      "expected_severity": "warning"
+    },
+    {
+      "case_id": "ED-003",
+      "rule_id": "EXPIRING_DOCUMENTS",
+      "description": "Visa expiring in 15 days (critical blocking window <= 30d).",
+      "input_data": {
+        "documents": [{"document_type": "visa", "document_reference": "V-CRIT", "expiry_date": "2026-11-15", "source_record_id": "DOC-ED-3"}],
+        "reference_date": "2026-10-31"
+      },
+      "expected_outcome": "fail",
+      "expected_severity": "blocking"
+    },
+    {
+      "case_id": "ED-004",
+      "rule_id": "EXPIRING_DOCUMENTS",
+      "description": "Passport already expired 11 days before period end date.",
+      "input_data": {
+        "documents": [{"document_type": "passport", "document_reference": "P-EXPIRED", "expiry_date": "2026-10-20", "source_record_id": "DOC-ED-4"}],
+        "reference_date": "2026-10-31"
+      },
+      "expected_outcome": "fail",
+      "expected_severity": "blocking"
+    }
+  ]
+}
