@@ -4,6 +4,7 @@ import {
   fetchSubmissions,
   decideSubmission,
   createExportPack,
+  fetchHrAiSummary,
 } from '../api';
 import GlassCard from '../components/common/GlassCard';
 import StatsCard from '../components/common/StatsCard';
@@ -39,6 +40,7 @@ import {
   Layers,
   PieChart as PieIcon,
   Flame,
+  Sparkles,
 } from 'lucide-react';
 
 export default function HRPage() {
@@ -59,6 +61,10 @@ export default function HRPage() {
   // Export action state
   const [exportingId, setExportingId] = useState(null);
 
+  // Phase 9: AI Executive Briefing state
+  const [aiSummary, setAiSummary] = useState(null);
+  const [isAiSummaryLoading, setIsAiSummaryLoading] = useState(false);
+
   useEffect(() => {
     loadData(selectedMonth);
   }, [selectedMonth]);
@@ -67,16 +73,31 @@ export default function HRPage() {
     setLoading(true);
     setError(null);
     try {
-      const [m, s] = await Promise.all([
+      const [m, s, ai] = await Promise.all([
         fetchHRMetrics(month),
         fetchSubmissions(month),
+        fetchHrAiSummary(month),
       ]);
       setMetrics(m);
       setSubmissions(s);
+      setAiSummary(ai);
     } catch (err) {
       setError(err.message || 'Failed to load HR compliance data.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleRefreshAiSummary() {
+    setIsAiSummaryLoading(true);
+    try {
+      const ai = await fetchHrAiSummary(selectedMonth);
+      setAiSummary(ai);
+      setSuccessMsg(`AI Month-End Briefing updated for ${selectedMonth}.`);
+    } catch (err) {
+      console.warn('Failed to refresh AI summary:', err);
+    } finally {
+      setIsAiSummaryLoading(false);
     }
   }
 
@@ -177,6 +198,83 @@ export default function HRPage() {
           </select>
         </div>
       </div>
+
+      {/* Phase 9: AI Executive Month-End Briefing */}
+      <GlassCard className="border-l-4 border-l-[#F26A21]">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-orange-100 dark:bg-orange-950/40 text-[#F26A21]">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  AI Executive Month-End Briefing ({selectedMonth})
+                </h3>
+                <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200/50">
+                  AI-generated, review before use
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Automated statistical synthesis across timesheet, attendance, and expense feeds.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleRefreshAiSummary}
+            disabled={isAiSummaryLoading}
+            className="px-3 py-1.5 rounded-xl border border-orange-200 dark:border-orange-900/60 bg-orange-50/50 dark:bg-orange-950/20 text-[#F26A21] hover:bg-orange-100/50 text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-50"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            {isAiSummaryLoading ? 'Generating...' : 'Refresh AI Briefing'}
+          </button>
+        </div>
+
+        {isAiSummaryLoading ? (
+          <div className="py-6 flex flex-col items-center justify-center gap-2 text-slate-400">
+            <Sparkles className="w-6 h-6 text-[#F26A21] animate-spin" />
+            <p className="text-xs">Generating statistical month-end analysis with AI...</p>
+          </div>
+        ) : (
+          <div className="space-y-3 text-xs">
+            <p className="text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50/70 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
+              {aiSummary?.executive_summary}
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+              <div className="p-3 rounded-xl bg-slate-50/50 dark:bg-slate-800/30 border border-slate-200/50 dark:border-slate-700/50">
+                <span className="font-bold text-slate-800 dark:text-white block mb-1.5 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  Key Statistical Insights:
+                </span>
+                <ul className="space-y-1 text-slate-600 dark:text-slate-300 list-disc list-inside">
+                  {aiSummary?.key_insights?.map((item, idx) => (
+                    <li key={idx}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50/50 dark:bg-slate-800/30 border border-slate-200/50 dark:border-slate-700/50">
+                <span className="font-bold text-slate-800 dark:text-white block mb-1.5 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                  Recommended HR Actions:
+                </span>
+                <ul className="space-y-1 text-slate-600 dark:text-slate-300 list-disc list-inside">
+                  {aiSummary?.recommended_actions?.map((item, idx) => (
+                    <li key={idx}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500 border-t border-slate-200/40 dark:border-slate-800/60">
+              <span>{aiSummary?.surveillance_notice || 'Strictly statistical overview; screen monitoring, keystroke tracking, and productivity scoring are prohibited by design.'}</span>
+              <span className="font-mono">Provider: {aiSummary?.provider || 'deterministic_template'}</span>
+            </div>
+          </div>
+        )}
+      </GlassCard>
 
       {/* 4 Financial KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

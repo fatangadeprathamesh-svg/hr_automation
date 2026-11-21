@@ -45,5 +45,12 @@ class Settings(BaseSettings):
     CRUSTDATA_API_KEY: str = "crustdata_key_placeholder"
     CRUSTDATA_BASE_URL: str = "https://api.crustdata.com"
 
+    # AI / LLM Explainers (Phase 9: Provider-agnostic gemini | anthropic | none)
+    LLM_PROVIDER: str = "none"
+    GEMINI_API_KEY: Optional[str] = None
+    GEMINI_MODEL: str = "gemini-1.5-flash"
+    ANTHROPIC_API_KEY: Optional[str] = None
+    ANTHROPIC_MODEL: str = "claude-3-haiku-20240307"
+
 
 settings = Settings()

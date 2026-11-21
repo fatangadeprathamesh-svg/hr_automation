@@ -5,6 +5,8 @@ import {
   submitMonthEnd,
   resolveAllBlockersDemo,
   resetFlagsDemo,
+  explainFlagAI,
+  draftCorrectionAI,
 } from '../api';
 import GlassCard from '../components/common/GlassCard';
 import ReadinessRing from '../components/common/ReadinessRing';
@@ -52,6 +54,12 @@ export default function EmployeePage() {
 
   // Explain AI modal state
   const [explainFlag, setExplainFlag] = useState(null);
+  const [explainDetails, setExplainDetails] = useState(null);
+  const [isExplainingLoading, setIsExplainingLoading] = useState(false);
+
+  // AI Draft Assistant state
+  const [aiDraftLoading, setAiDraftLoading] = useState(false);
+  const [hasAiDrafted, setHasAiDrafted] = useState(false);
 
   // Freeze submission state
   const [isFreezing, setIsFreezing] = useState(false);
@@ -59,6 +67,39 @@ export default function EmployeePage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  async function handleOpenExplainer(flag) {
+    setExplainFlag(flag);
+    setExplainDetails(null);
+    setIsExplainingLoading(true);
+    try {
+      const details = await explainFlagAI(flag);
+      setExplainDetails(details);
+    } catch (e) {
+      console.warn('Failed to load AI explainer:', e);
+    } finally {
+      setIsExplainingLoading(false);
+    }
+  }
+
+  async function handleGenerateAiDraft() {
+    if (!selectedFlag) return;
+    setAiDraftLoading(true);
+    try {
+      const draft = await draftCorrectionAI(selectedFlag, employeeReason);
+      if (draft.proposed_value && (!proposedValue || proposedValue.trim() === '')) {
+        setProposedValue(draft.proposed_value);
+      }
+      if (draft.draft_reason) {
+        setEmployeeReason(draft.draft_reason);
+      }
+      setHasAiDrafted(true);
+    } catch (e) {
+      console.warn('AI drafting failed:', e);
+    } finally {
+      setAiDraftLoading(false);
+    }
+  }
 
   async function loadData() {
     setLoading(true);
@@ -375,8 +416,9 @@ export default function EmployeePage() {
               setSelectedFlag(flag);
               setProposedValue(flag.rule_id === 'hours_mismatch' ? '8.0' : '');
               setEmployeeReason('');
+              setHasAiDrafted(false);
             }}
-            onExplainAI={(flag) => setExplainFlag(flag)}
+            onExplainAI={(flag) => handleOpenExplainer(flag)}
           />
         ) : (
           <EmptyState
@@ -412,7 +454,7 @@ export default function EmployeePage() {
                 <span className="font-bold block text-slate-500 uppercase text-[10px] mb-1">
                   System Evidence
                 </span>
-                {selectedFlag.evidence}
+                {typeof selectedFlag.evidence === 'object' ? JSON.stringify(selectedFlag.evidence) : selectedFlag.evidence}
               </div>
 
               <div>
@@ -430,9 +472,20 @@ export default function EmployeePage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Reason for Correction (Sent to Manager)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Reason for Correction (Sent to Manager)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleGenerateAiDraft}
+                    disabled={aiDraftLoading}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-[#F26A21] font-semibold text-[11px] transition disabled:opacity-50"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    {aiDraftLoading ? 'Drafting...' : '✨ AI Assist Draft'}
+                  </button>
+                </div>
                 <textarea
                   rows={3}
                   required
@@ -441,6 +494,12 @@ export default function EmployeePage() {
                   placeholder="Explain why this discrepancy occurred (e.g., onsite client visit, turnstile sensor missed badge)..."
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-xs text-slate-800 dark:text-white focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none"
                 />
+                {hasAiDrafted && (
+                  <div className="mt-2 flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1.5 rounded-lg border border-amber-200/50">
+                    <Sparkles className="w-3 h-3 shrink-0" />
+                    <span>AI-generated, review before use &bull; Edit as needed</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200/60 dark:border-slate-700/60">
@@ -469,16 +528,21 @@ export default function EmployeePage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm">
           <div className="glass-panel w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl relative">
             <div className="flex items-center justify-between pb-4 border-b border-slate-200/60 dark:border-slate-700/60">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-orange-100 text-[#F26A21]">
-                  <HelpCircle className="w-5 h-5" />
+                  <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Rule Explainer
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Rule ID: {explainFlag.rule_id} &bull; Policy: {explainFlag.policy_version}
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                      AI Policy Explainer
+                    </h3>
+                    <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200/50">
+                      AI-generated, review before use
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Rule: {explainFlag.rule_id} &bull; Policy: {explainFlag.policy_version || 'POLICY-2026.1'}
                   </p>
                 </div>
               </div>
@@ -487,29 +551,73 @@ export default function EmployeePage() {
               </button>
             </div>
 
-            <div className="mt-4 space-y-3 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-              <p>
-                <strong className="text-slate-800 dark:text-white">Why was this flagged?</strong><br />
-                {explainFlag.description}
-              </p>
-              <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 font-mono text-[11px]">
-                <span className="font-bold text-slate-400 block mb-1">Evidence Parameters:</span>
-                {explainFlag.evidence}
+            {isExplainingLoading ? (
+              <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-500 dark:text-slate-400">
+                <Sparkles className="w-7 h-7 text-[#F26A21] animate-spin" />
+                <p className="text-xs font-medium">Generating policy analysis & resolution guidance...</p>
               </div>
-              <p>
-                <strong className="text-slate-800 dark:text-white">How to resolve:</strong><br />
-                Submit a correction request proposing the verified hours or attach missing receipts. Your manager will receive this request for version-bound sign-off.
-              </p>
-            </div>
+            ) : (
+              <div className="mt-4 space-y-3.5 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                <div>
+                  <strong className="text-slate-800 dark:text-white block font-semibold mb-1">
+                    Policy Standard:
+                  </strong>
+                  <p className="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 text-slate-600 dark:text-slate-300">
+                    {explainDetails?.policy_summary || 'Policy requires accurate time, punch pairs, and substantiated expense records.'}
+                  </p>
+                </div>
 
-            <div className="mt-6 pt-4 border-t border-slate-200/60 dark:border-slate-700/60 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setExplainFlag(null)}
-                className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white text-xs font-semibold"
-              >
-                Close
-              </button>
+                <div>
+                  <strong className="text-slate-800 dark:text-white block font-semibold mb-1">
+                    Why was this flagged?
+                  </strong>
+                  <p>{explainDetails?.explanation || explainFlag.description}</p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800/80 font-mono text-[11px]">
+                  <span className="font-bold text-slate-400 block mb-1">Evidence Parameters:</span>
+                  {typeof explainFlag.evidence === 'object' ? JSON.stringify(explainFlag.evidence) : explainFlag.evidence}
+                </div>
+
+                <div>
+                  <strong className="text-slate-800 dark:text-white block font-semibold mb-1">
+                    Recommended Resolution:
+                  </strong>
+                  <p className="text-slate-700 dark:text-slate-200 font-medium">
+                    {explainDetails?.suggested_action || 'Submit a manager-reviewed correction request or attach missing documentation.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6 pt-4 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
+              <span className="text-[11px] text-slate-400">
+                Non-punitive self-audit guide
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setExplainFlag(null)}
+                  className="px-3.5 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white text-xs font-semibold"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const targetFlag = explainFlag;
+                    setExplainFlag(null);
+                    setSelectedFlag(targetFlag);
+                    setEmployeeReason('');
+                    setProposedValue('');
+                    setHasAiDrafted(false);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-[#F26A21] hover:bg-[#dc5612] text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-md shadow-orange-500/20"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Proceed to Correction
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -30,6 +30,8 @@ ORGANIZATION_ID = "ORG_DEMO_01"
 
 def seed_employees(db: Session):
     """Seeds exactly 30 employees across 3 departments with realistic reporting hierarchy."""
+    if db.query(Employee).count() >= 30:
+        return
     sample_csv = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "..", "sample-data", "employees.csv")
     )
@@ -60,6 +62,8 @@ def seed_employees(db: Session):
 
 def seed_user_accounts(db: Session):
     """Seeds hashed password credentials and role linkages for all employees."""
+    if db.query(UserAuth).count() >= 30:
+        return
     employees = db.query(Employee).all()
     default_hash = hash_password("Password123!")
 
@@ -146,6 +150,8 @@ def seed_synthetic_history(db: Session):
     Includes normal passes, overnight shifts, split shifts, missing punches,
     hours mismatches, and missing receipts.
     """
+    if db.query(Attendance).count() >= 50:
+        return
     months = ["2026-05", "2026-06", "2026-07", "2026-08", "2026-09", "2026-10"]
     employees = db.query(Employee).all()
 
@@ -329,6 +335,8 @@ def seed_synthetic_history(db: Session):
 
 def seed_sample_csv_feeds(db: Session):
     """Ingests base sample CSVs from sample-data folder if present to ensure 100% test alignment."""
+    if db.query(SourceImport).count() >= 5:
+        return
     sample_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "sample-data"))
     if not os.path.exists(sample_dir):
         return
