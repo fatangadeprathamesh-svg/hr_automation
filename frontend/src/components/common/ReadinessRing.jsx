@@ -50,7 +50,7 @@ export default function ReadinessRing({ percentage = 78, size = 180, strokeWidth
             r={radius}
             stroke="currentColor"
             strokeWidth={strokeWidth}
-            className="text-slate-200/70 dark:text-slate-800/70"
+            className="text-slate-200/70 dark:text-slate-700/50"
             fill="transparent"
           />
           {/* Animated progress ring */}
