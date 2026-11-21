@@ -27,3 +27,7 @@ frontend/.env
 .idea/
 .DS_Store
 Thumbs.db
+
+# Temporary upload files
+temp_uploads/
+sample-data/rejected_*.csv

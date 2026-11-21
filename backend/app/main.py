@@ -16,6 +16,7 @@ from app.api.submissions import router as submissions_router
 from app.api.exports import router as exports_router
 from app.api.auth import router as auth_router
 from app.api.explainers import router as explainers_router
+from app.api.master_uploads import router as master_uploads_router
 
 
 @asynccontextmanager
@@ -56,6 +57,7 @@ app.include_router(exports_router)
 app.include_router(auth_router)
 app.include_router(explainers_router, prefix="/api")
 app.include_router(explainers_router)
+app.include_router(master_uploads_router)
 
 
 @app.get("/health")

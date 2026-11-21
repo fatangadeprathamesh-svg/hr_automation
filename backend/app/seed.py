@@ -16,6 +16,10 @@ from app.models.hr import (
     Document,
     AuditEvent,
 )
+from app.models.master_hr import (
+    MasterUpload,
+    MasterHRRecord,
+)
 from app.models.auth import UserAuth, OTPVerification
 from app.auth.service import hash_password
 from app.models.base import generate_uuid

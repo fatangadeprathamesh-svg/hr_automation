@@ -18,6 +18,10 @@ from app.models.hr import (
     AuditEvent,
     ExternalEnrichment,
 )
+from app.models.master_hr import (
+    MasterUpload,
+    MasterHRRecord,
+)
 
 __all__ = [
     "Base",
@@ -39,4 +43,6 @@ __all__ = [
     "ExportRun",
     "AuditEvent",
     "ExternalEnrichment",
+    "MasterUpload",
+    "MasterHRRecord",
 ]

@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     APP_SECRET_KEY: str = "change-this-insecure-secret-key-for-dev-only-32bytesmin"
     ORGANIZATION_ID: str = "ORG_DEMO_01"
     DEFAULT_TIMEZONE: str = "America/New_York"
+    MAX_UPLOAD_SIZE_MB: int = 200
 
     # Database
     DATABASE_URL: str = "sqlite:///./hr_audit.db"

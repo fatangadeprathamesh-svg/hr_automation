@@ -6,6 +6,7 @@ import EmployeePage from './pages/EmployeePage';
 import ManagerPage from './pages/ManagerPage';
 import HRPage from './pages/HRPage';
 import AuditLogPage from './pages/AuditLogPage';
+import DataImportPage from './pages/DataImportPage';
 import AppLayout from './components/layout/AppLayout';
 import { getCurrentPersona } from './api';
 
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="/employee" element={<EmployeePage key={persona?.id} />} />
           <Route path="/manager" element={<ManagerPage key={persona?.id} />} />
           <Route path="/hr" element={<HRPage key={persona?.id} />} />
+          <Route path="/data-import" element={<DataImportPage key={persona?.id} />} />
           <Route path="/audit-log" element={<AuditLogPage key={persona?.id} />} />
         </Route>
 

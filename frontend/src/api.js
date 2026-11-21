@@ -1298,6 +1298,213 @@ export async function draftCorrectionAI(flag, userNotes = "") {
   };
 }
 
+// -------------------------------------------------------------
+// MASTER HR CSV UPLOAD & RECORDS SERVICE
+// -------------------------------------------------------------
+
+export async function uploadMasterCsv(file) {
+  if (!USE_MOCK) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const headers = {};
+    const token = currentToken;
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    } else {
+      const p = currentPersona || PERSONAS.HR001;
+      headers["Authorization"] = `Bearer DEV_TOKEN_${p.id}_${p.role}`;
+    }
+
+    const res = await fetch(`${API_BASE}/api/uploads`, {
+      method: "POST",
+      headers,
+      credentials: "include",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      let errMsg = "Upload failed";
+      try {
+        const errJson = await res.json();
+        errMsg = errJson.detail || errMsg;
+      } catch (_) {}
+      throw new Error(errMsg);
+    }
+
+    return await res.json();
+  }
+
+  return {
+    upload_id: `mock-upload-${Date.now()}`,
+    filename: file.name,
+    status: "done",
+    sha256: "mock_sha256_hash",
+    duplicate_warning: false,
+    message: "File ingested in mock mode.",
+  };
+}
+
+export async function getUploadStatus(uploadId) {
+  if (!USE_MOCK) {
+    const res = await fetch(`${API_BASE}/api/uploads/${uploadId}`, {
+      headers: getAuthHeaders(),
+      credentials: "include",
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch upload status: HTTP ${res.status}`);
+    }
+    return await res.json();
+  }
+
+  return {
+    id: uploadId,
+    filename: "master_hr.csv",
+    status: "done",
+    total_rows: 1250,
+    accepted_rows: 1245,
+    rejected_rows: 5,
+    duration_seconds: 0.85,
+    rows_per_second: 1470.5,
+    duplicate_warning: false,
+  };
+}
+
+export async function getRejectedRows(uploadId) {
+  if (!USE_MOCK) {
+    const res = await fetch(`${API_BASE}/api/uploads/${uploadId}/rejected`, {
+      headers: getAuthHeaders(),
+      credentials: "include",
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch rejected rows: HTTP ${res.status}`);
+    }
+    return await res.json();
+  }
+
+  return {
+    upload_id: uploadId,
+    rejected_count: 2,
+    rejected_rows: [
+      { row_num: 12, record_id: "ERR-012", reason: "hours_total 26.0 must be between 0 and 24", raw_preview: "ERR-012,timesheet,..." },
+      { row_num: 45, record_id: "ERR-045", reason: "end_date (2026-10-01) cannot be before start_date (2026-10-05)", raw_preview: "ERR-045,leave_request,..." },
+    ],
+  };
+}
+
+export async function downloadRejectedRowsCsv(uploadId) {
+  const token = currentToken;
+  const authHeader = token ? `Bearer ${token}` : `Bearer DEV_TOKEN_HR001_hr_admin`;
+  const url = `${API_BASE}/api/uploads/${uploadId}/rejected?format=csv`;
+
+  const res = await fetch(url, {
+    headers: { Authorization: authHeader },
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to download rejected rows CSV.");
+  }
+
+  const blob = await res.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = downloadUrl;
+  a.download = `rejected_rows_${uploadId}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(downloadUrl);
+}
+
+export async function getUploadHistory(limit = 50) {
+  if (!USE_MOCK) {
+    const res = await fetch(`${API_BASE}/api/uploads?limit=${limit}`, {
+      headers: getAuthHeaders(),
+      credentials: "include",
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  }
+
+  return {
+    uploads: [
+      {
+        id: "mock-upl-1",
+        filename: "master_hr_october.csv",
+        uploaded_at: new Date().toISOString(),
+        status: "done",
+        total_rows: 5000,
+        accepted_rows: 4995,
+        rejected_rows: 5,
+        duration_seconds: 0.63,
+        rows_per_second: 7936.5,
+        duplicate_warning: false,
+      }
+    ]
+  };
+}
+
+export async function getMasterRecords(params = {}) {
+  if (!USE_MOCK) {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== "") {
+        query.append(k, v);
+      }
+    });
+
+    const res = await fetch(`${API_BASE}/api/records?${query.toString()}`, {
+      headers: getAuthHeaders(),
+      credentials: "include",
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  }
+
+  return {
+    items: [],
+    total: 0,
+    page: 1,
+    page_size: params.page_size || 50,
+    total_pages: 1,
+  };
+}
+
+export async function getMasterStats() {
+  if (!USE_MOCK) {
+    const res = await fetch(`${API_BASE}/api/stats`, {
+      headers: getAuthHeaders(),
+      credentials: "include",
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  }
+
+  return {
+    total_records: 0,
+    by_record_type: {
+      employee_profile: 0,
+      leave_request: 0,
+      leave_balance: 0,
+      timesheet: 0,
+      training: 0,
+      engagement_survey: 0,
+      applicant: 0,
+    },
+    totals: {
+      leave_days_total: 0,
+      timesheet_hours_total: 0,
+      unapproved_timesheets: 0,
+      employees_count: 0,
+      applicants_count: 0,
+    }
+  };
+}
+
 export async function fetchHrAiSummary(period = "2026-10") {
   if (!USE_MOCK) {
     try {
