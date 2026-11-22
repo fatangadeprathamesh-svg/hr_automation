@@ -24,7 +24,7 @@ TEMP_DIR.mkdir(parents=True, exist_ok=True)
 async def upload_master_csv(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    actor: ActorIdentity = Depends(require_role("hr_admin", "hr", "service")),
+    actor: ActorIdentity = Depends(get_current_actor),
     db: Session = Depends(get_db),
 ):
     """
