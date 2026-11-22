@@ -1,83 +1,182 @@
 @layer base {
   :root {
-    --color-accent: #F26A21;
-    --color-accent-hover: #dc5612;
-    --color-accent-light: #ffedd5;
+    /* ==========================================================================
+       INDIGO & GOLD THEME (DARK THEME IS THE DEFAULT)
+       ========================================================================== */
+    --bg: #0B1020;
+    --surface: #121933;
+    --surface-2: #1A2347;
+    --border: rgba(245, 241, 232, 0.10);
+    --text: #F5F1E8;
+    --text-muted: #A7B0C4;
+    --accent: #D4A84B;        /* Gold fill */
+    --accent-ink: #0B1020;    /* Text on gold buttons */
+    --accent-text: #D4A84B;   /* Gold text/icons in dark mode */
+    --accent-hover: #c49638;
+    --accent-border: #D4A84B;
+    --accent-glow: rgba(212, 168, 75, 0.28);
+    --accent-bg-subtle: rgba(212, 168, 75, 0.14);
+    --accent-border-subtle: rgba(212, 168, 75, 0.32);
+
+    /* Fixed Status Colors (never use gold for status) */
+    --status-error: #F87171;
+    --status-error-bg: rgba(248, 113, 113, 0.15);
+    --status-error-border: rgba(248, 113, 113, 0.35);
+
+    --status-warning: #FB923C;
+    --status-warning-bg: rgba(251, 146, 60, 0.15);
+    --status-warning-border: rgba(251, 146, 60, 0.35);
+
+    --status-success: #4ADE80;
+    --status-success-bg: rgba(74, 222, 128, 0.15);
+    --status-success-border: rgba(74, 222, 128, 0.35);
+
+    --status-info: #60A5FA;
+    --status-info-bg: rgba(96, 165, 250, 0.15);
+    --status-info-border: rgba(96, 165, 250, 0.35);
+
+    /* Chart series */
+    --chart-primary: #D4A84B;
+    --chart-secondary: #A7B0C4;
+    --chart-tertiary: #1A2347;
+
+    /* Glass Panels */
+    --glass-bg: rgba(18, 25, 51, 0.78);
+    --glass-border: rgba(245, 241, 232, 0.10);
+    --glass-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.50);
+
+    color-scheme: dark;
   }
 
   body {
     margin: 0;
+    background-color: var(--bg);
+    color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 }
 
-/* Color Scheme & Dark Mode Base Guarantees */
-.dark {
+/* ==========================================================================
+   LIGHT THEME OVERRIDES (when html does NOT have .dark or has .light)
+   ========================================================================== */
+html:not(.dark),
+html.light {
+  --bg: #F5F1E8;
+  --surface: #FFFFFF;
+  --surface-2: #EAE4D5;
+  --border: rgba(11, 16, 32, 0.12);
+  --text: #0B1020;
+  --text-muted: #5B6478;
+  --accent: #D4A84B;
+  --accent-ink: #0B1020;
+  --accent-text: #7A5C14;   /* WCAG 2.1 AA compliant gold on light surfaces */
+  --accent-hover: #b88f39;
+  --accent-border: #9E751D; /* WCAG 2.1 3:1 graphical component boundary */
+  --accent-glow: rgba(212, 168, 75, 0.22);
+  --accent-bg-subtle: rgba(212, 168, 75, 0.14);
+  --accent-border-subtle: rgba(122, 92, 20, 0.25);
+
+  --status-error: #B91C1C;
+  --status-error-bg: rgba(185, 28, 28, 0.10);
+  --status-error-border: rgba(185, 28, 28, 0.25);
+
+  --status-warning: #C2410C;
+  --status-warning-bg: rgba(194, 65, 12, 0.10);
+  --status-warning-border: rgba(194, 65, 12, 0.25);
+
+  --status-success: #166534;
+  --status-success-bg: rgba(22, 101, 52, 0.10);
+  --status-success-border: rgba(22, 101, 52, 0.25);
+
+  --status-info: #1D4ED8;
+  --status-info-bg: rgba(29, 78, 216, 0.10);
+  --status-info-border: rgba(29, 78, 216, 0.25);
+
+  --chart-primary: #D4A84B;
+  --chart-secondary: #5B6478;
+  --chart-tertiary: #EAE4D5;
+
+  --glass-bg: rgba(255, 255, 255, 0.88);
+  --glass-border: rgba(11, 16, 32, 0.12);
+  --glass-shadow: 0 10px 30px 0 rgba(11, 16, 32, 0.06);
+
+  color-scheme: light;
+}
+
+html.dark {
+  --bg: #0B1020;
+  --surface: #121933;
+  --surface-2: #1A2347;
+  --border: rgba(245, 241, 232, 0.10);
+  --text: #F5F1E8;
+  --text-muted: #A7B0C4;
+  --accent: #D4A84B;
+  --accent-ink: #0B1020;
+  --accent-text: #D4A84B;
+  --accent-hover: #c49638;
+  --accent-border: #D4A84B;
+  --accent-glow: rgba(212, 168, 75, 0.28);
+  --accent-bg-subtle: rgba(212, 168, 75, 0.14);
+  --accent-border-subtle: rgba(212, 168, 75, 0.32);
+
+  --status-error: #F87171;
+  --status-error-bg: rgba(248, 113, 113, 0.15);
+  --status-error-border: rgba(248, 113, 113, 0.35);
+
+  --status-warning: #FB923C;
+  --status-warning-bg: rgba(251, 146, 60, 0.15);
+  --status-warning-border: rgba(251, 146, 60, 0.35);
+
+  --status-success: #4ADE80;
+  --status-success-bg: rgba(74, 222, 128, 0.15);
+  --status-success-border: rgba(74, 222, 128, 0.35);
+
+  --status-info: #60A5FA;
+  --status-info-bg: rgba(96, 165, 250, 0.15);
+  --status-info-border: rgba(96, 165, 250, 0.35);
+
+  --chart-primary: #D4A84B;
+  --chart-secondary: #A7B0C4;
+  --chart-tertiary: #1A2347;
+
+  --glass-bg: rgba(18, 25, 51, 0.78);
+  --glass-border: rgba(245, 241, 232, 0.10);
+  --glass-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.50);
+
   color-scheme: dark;
 }
 
-.dark body {
-  background-color: #0b0f19;
-  color: #f8fafc;
-}
-
-/* Text Contrast Guarantees in Dark Mode */
-.dark .text-slate-900,
-.dark .text-slate-800 {
-  color: #f8fafc !important;
-}
-
-.dark .text-slate-700 {
-  color: #e2e8f0 !important;
-}
-
-.dark .text-slate-600 {
-  color: #cbd5e1 !important;
-}
-
-.dark .text-slate-500 {
-  color: #94a3b8 !important;
-}
-
-/* Ensure SVG text in charts and readiness ring is visible */
-.dark text {
-  fill: #cbd5e1;
-}
-
-.dark .recharts-cartesian-grid line {
-  stroke: rgba(255, 255, 255, 0.08);
-}
-
-/* Background Soft Peach, Lilac and Blue Gradient */
+/* ==========================================================================
+   AMBIENT BACKGROUND GRADIENT
+   Deep indigo with subtle gold ambient glows in dark mode;
+   Warm ivory with gentle champagne hues in light mode.
+   ========================================================================== */
 .app-gradient-bg {
-  background: radial-gradient(circle at 10% 20%, rgba(254, 215, 170, 0.45) 0%, transparent 45%),
-              radial-gradient(circle at 90% 10%, rgba(233, 213, 255, 0.45) 0%, transparent 45%),
-              radial-gradient(circle at 50% 90%, rgba(186, 230, 253, 0.5) 0%, transparent 50%),
-              linear-gradient(135deg, #fff7ed 0%, #faf5ff 50%, #f0f9ff 100%);
+  background: radial-gradient(circle at 12% 16%, rgba(212, 168, 75, 0.08) 0%, transparent 35%),
+              radial-gradient(circle at 88% 12%, rgba(26, 35, 71, 0.65) 0%, transparent 45%),
+              radial-gradient(circle at 50% 90%, rgba(18, 25, 51, 0.85) 0%, transparent 55%),
+              linear-gradient(135deg, #0B1020 0%, #0e1428 50%, #080c18 100%);
   min-height: 100vh;
 }
 
-.dark .app-gradient-bg {
-  background: radial-gradient(circle at 10% 20%, rgba(242, 106, 33, 0.12) 0%, transparent 45%),
-              radial-gradient(circle at 90% 10%, rgba(147, 51, 234, 0.15) 0%, transparent 45%),
-              radial-gradient(circle at 50% 90%, rgba(14, 165, 233, 0.12) 0%, transparent 50%),
-              linear-gradient(135deg, #090d16 0%, #0f172a 50%, #030712 100%);
+html:not(.dark) .app-gradient-bg,
+html.light .app-gradient-bg {
+  background: radial-gradient(circle at 12% 16%, rgba(212, 168, 75, 0.10) 0%, transparent 40%),
+              radial-gradient(circle at 88% 12%, rgba(226, 220, 208, 0.6) 0%, transparent 45%),
+              radial-gradient(circle at 50% 90%, rgba(235, 230, 218, 0.6) 0%, transparent 50%),
+              linear-gradient(135deg, #F5F1E8 0%, #EDE7D9 50%, #F5F1E8 100%);
   min-height: 100vh;
 }
 
-/* Glassmorphism for Cards, Sidebar, TopBar, Readiness Ring ONLY */
+/* ==========================================================================
+   GLASSMORPHISM & SOLID SURFACES
+   ========================================================================== */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.68);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 10px 30px 0 rgba(30, 41, 59, 0.05);
-}
-
-.dark .glass-panel {
-  background: rgba(15, 23, 42, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.4);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
 }
 
 @supports (backdrop-filter: blur(14px)) or (-webkit-backdrop-filter: blur(14px)) {
@@ -89,25 +188,68 @@
 
 @supports not ((backdrop-filter: blur(14px)) or (-webkit-backdrop-filter: blur(14px))) {
   .glass-panel {
-    background: rgba(255, 255, 255, 0.95);
-  }
-  .dark .glass-panel {
-    background: rgba(15, 23, 42, 0.96);
+    background: var(--surface);
   }
 }
 
-/* Solid Surfaces for Tables and Audit Log */
 .solid-surface {
-  background-color: #ffffff !important;
-  border: 1px solid #e2e8f0;
+  background-color: var(--surface) !important;
+  border: 1px solid var(--border);
 }
 
-.dark .solid-surface {
-  background-color: #0f172a !important;
-  border: 1px solid #1e293b;
+/* Recharts grid lines & typography */
+.recharts-cartesian-grid line {
+  stroke: var(--border);
 }
 
-/* Animations: OTP Shake */
+text {
+  fill: var(--text-muted);
+}
+
+/* ==========================================================================
+   ACCENT & BUTTON UTILITIES
+   ========================================================================== */
+.btn-accent,
+.btn-gold {
+  background-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  border: 1px solid var(--accent-border);
+  box-shadow: 0 4px 14px var(--accent-glow);
+  transition: all 0.2s ease;
+}
+
+.btn-accent:hover,
+.btn-gold:hover {
+  background-color: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.badge-accent,
+.badge-gold {
+  background-color: var(--accent-bg-subtle);
+  color: var(--accent-text);
+  border: 1px solid var(--accent-border-subtle);
+}
+
+/* Global scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--surface-2);
+  border-radius: 9999px;
+  border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* OTP animations */
 @keyframes shakeBox {
   0%, 100% { transform: translateX(0); }
   20%, 60% { transform: translateX(-8px); }
@@ -118,7 +260,6 @@
   animation: shakeBox 0.4s ease-in-out;
 }
 
-/* Animations: OTP Merge into Green Bar */
 @keyframes mergeSuccessBar {
   0% {
     transform: scale(0.96);
@@ -136,7 +277,6 @@
   animation: mergeSuccessBar 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Accessibility: Respect Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
     animation-duration: 0.001ms !important;

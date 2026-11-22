@@ -12,7 +12,7 @@ export default function PrivacyPolicyPage() {
     >
       <section>
         <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2">
-          <Database className="w-5 h-5 text-[#F26A21]" />
+          <Database className="w-5 h-5 text-[var(--accent-text)]" />
           1. Scope &amp; Nature of Application
         </h2>
         <p className="text-slate-600 dark:text-slate-300">
@@ -25,7 +25,7 @@ export default function PrivacyPolicyPage() {
 
       <section>
         <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2">
-          <UserCheck className="w-5 h-5 text-[#F26A21]" />
+          <UserCheck className="w-5 h-5 text-[var(--accent-text)]" />
           2. Personal Data Processed in this Prototype
         </h2>
         <p className="text-slate-600 dark:text-slate-300 mb-3">
@@ -53,7 +53,7 @@ export default function PrivacyPolicyPage() {
 
       <section>
         <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2">
-          <Lock className="w-5 h-5 text-[#F26A21]" />
+          <Lock className="w-5 h-5 text-[var(--accent-text)]" />
           3. Purposes of Processing &amp; Role-Based Access
         </h2>
         <p className="text-slate-600 dark:text-slate-300 mb-2">
@@ -69,7 +69,7 @@ export default function PrivacyPolicyPage() {
 
       <section>
         <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2">
-          <ShieldCheck className="w-5 h-5 text-[#F26A21]" />
+          <ShieldCheck className="w-5 h-5 text-[var(--accent-text)]" />
           4. Data Security &amp; Immutable Audit Trail
         </h2>
         <p className="text-slate-600 dark:text-slate-300">
@@ -81,23 +81,23 @@ export default function PrivacyPolicyPage() {
 
       <section>
         <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2">
-          <Scale className="w-5 h-5 text-[#F26A21]" />
+          <Scale className="w-5 h-5 text-[var(--accent-text)]" />
           5. Rights Under India's DPDP Act 2023
         </h2>
         <p className="text-slate-600 dark:text-slate-300 mb-3">
           Under Chapter III of the Digital Personal Data Protection Act 2023, Data Principals enjoy explicit statutory rights:
         </p>
         <div className="space-y-2 text-xs">
-          <div className="p-3 rounded-xl bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200/60 dark:border-orange-800/60">
+          <div className="p-3 rounded-xl bg-[var(--accent-bg-subtle)] border border-[var(--accent-border-subtle)]">
             <strong className="text-slate-900 dark:text-white">Right to Access Information (Section 11):</strong> You may request a summary of your personal data and processing activities.
           </div>
-          <div className="p-3 rounded-xl bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200/60 dark:border-orange-800/60">
+          <div className="p-3 rounded-xl bg-[var(--accent-bg-subtle)] border border-[var(--accent-border-subtle)]">
             <strong className="text-slate-900 dark:text-white">Right to Correction and Erasure (Section 12):</strong> You may request correction of inaccurate data or erasure of data no longer necessary for the audit purpose.
           </div>
-          <div className="p-3 rounded-xl bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200/60 dark:border-orange-800/60">
+          <div className="p-3 rounded-xl bg-[var(--accent-bg-subtle)] border border-[var(--accent-border-subtle)]">
             <strong className="text-slate-900 dark:text-white">Right of Grievance Redressal (Section 13):</strong> You have the right to register grievances with our Data Protection Officer.
           </div>
-          <div className="p-3 rounded-xl bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200/60 dark:border-orange-800/60">
+          <div className="p-3 rounded-xl bg-[var(--accent-bg-subtle)] border border-[var(--accent-border-subtle)]">
             <strong className="text-slate-900 dark:text-white">Right to Nominate (Section 14):</strong> You may designate a representative to exercise your data rights in the event of death or incapacity.
           </div>
         </div>
@@ -105,7 +105,7 @@ export default function PrivacyPolicyPage() {
 
       <section>
         <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2">
-          <Mail className="w-5 h-5 text-[#F26A21]" />
+          <Mail className="w-5 h-5 text-[var(--accent-text)]" />
           6. Grievance Officer Contact
         </h2>
         <p className="text-slate-600 dark:text-slate-300 mb-2">
@@ -114,7 +114,7 @@ export default function PrivacyPolicyPage() {
         <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs space-y-1">
           <p><strong>Name:</strong> {SITE_CONFIG.grievanceOfficer.name}</p>
           <p><strong>Designation:</strong> {SITE_CONFIG.grievanceOfficer.title}</p>
-          <p><strong>Email:</strong> <a href={`mailto:${SITE_CONFIG.grievanceOfficer.email}`} className="text-[#F26A21] underline">{SITE_CONFIG.grievanceOfficer.email}</a></p>
+          <p><strong>Email:</strong> <a href={`mailto:${SITE_CONFIG.grievanceOfficer.email}`} className="text-[var(--accent-text)] underline">{SITE_CONFIG.grievanceOfficer.email}</a></p>
           <p><strong>Address:</strong> {SITE_CONFIG.grievanceOfficer.address}</p>
           <p className="text-slate-500 dark:text-slate-400 pt-1">{SITE_CONFIG.grievanceOfficer.responseTimeline}</p>
         </div>

@@ -3,11 +3,11 @@ import GlassCard from './GlassCard';
 
 export default function StatsCard({ title, value, subtitle, icon: Icon, color = 'accent', trend = null }) {
   const colorMap = {
-    accent: 'text-[#F26A21] bg-orange-100/60 dark:bg-orange-950/40 border-orange-200/50',
-    green: 'text-emerald-600 bg-emerald-100/60 dark:bg-emerald-950/40 border-emerald-200/50',
-    amber: 'text-amber-600 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/50',
-    red: 'text-rose-600 bg-rose-100/60 dark:bg-rose-950/40 border-rose-200/50',
-    blue: 'text-sky-600 bg-sky-100/60 dark:bg-sky-950/40 border-sky-200/50',
+    accent: 'text-[var(--accent-text)] bg-[var(--accent-bg-subtle)] border-[var(--accent-border-subtle)]',
+    green: 'text-[var(--status-success)] bg-[var(--status-success-bg)] border-[var(--status-success-border)]',
+    amber: 'text-[var(--status-warning)] bg-[var(--status-warning-bg)] border-[var(--status-warning-border)]',
+    red: 'text-[var(--status-error)] bg-[var(--status-error-bg)] border-[var(--status-error-border)]',
+    blue: 'text-[var(--status-info)] bg-[var(--status-info-bg)] border-[var(--status-info-border)]',
   };
 
   const badgeStyle = colorMap[color] || colorMap.accent;

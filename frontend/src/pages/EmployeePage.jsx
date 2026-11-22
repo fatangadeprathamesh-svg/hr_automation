@@ -198,7 +198,7 @@ export default function EmployeePage() {
       {/* Interactive Demo Simulation Bar */}
       <div className="glass-panel rounded-2xl px-5 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200 font-medium">
-          <Sparkles className="w-4 h-4 text-[#F26A21]" />
+          <Sparkles className="w-4 h-4 text-[var(--accent-text)]" />
           <span>Interactive Readiness Simulation:</span>
           <span className="text-slate-500 dark:text-slate-400">
             Watch the readiness ring dynamically animate when blockers are resolved.
@@ -244,7 +244,7 @@ export default function EmployeePage() {
             onClick={handleSubmitMonthEnd}
             className={`mt-5 w-full max-w-xs py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg transition-all ${
               canSubmit
-                ? 'bg-[#F26A21] hover:bg-[#dc5612] text-white shadow-orange-500/25 cursor-pointer'
+                ? 'bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] border border-[var(--accent-border)] shadow-md shadow-[var(--accent-glow)] cursor-pointer'
                 : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed shadow-none'
             }`}
           >
@@ -295,7 +295,7 @@ export default function EmployeePage() {
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                 6-Month Audit Readiness Trend
               </h3>
-              <span className="text-[11px] font-mono text-[#F26A21] font-semibold bg-orange-50 dark:bg-orange-950/40 border border-orange-200/60 dark:border-orange-800/60 px-2 py-0.5 rounded-md">
+              <span className="text-[11px] font-mono text-[var(--accent-text)] font-semibold bg-[var(--accent-bg-subtle)] border border-[var(--accent-border-subtle)] px-2 py-0.5 rounded-md">
                 Current: {readiness}%
               </span>
             </div>
@@ -326,10 +326,10 @@ export default function EmployeePage() {
                   type="monotone"
                   dataKey="score"
                   name="Readiness Score"
-                  stroke="#F26A21"
+                  stroke="var(--accent)"
                   strokeWidth={3}
-                  dot={{ r: 5, fill: '#F26A21', strokeWidth: 2, stroke: '#ffffff' }}
-                  activeDot={{ r: 7, fill: '#F26A21', stroke: '#ffffff', strokeWidth: 2 }}
+                  dot={{ r: 5, fill: 'var(--accent)', strokeWidth: 2, stroke: 'var(--surface)' }}
+                  activeDot={{ r: 7, fill: 'var(--accent)', stroke: 'var(--surface)', strokeWidth: 2 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -377,7 +377,7 @@ export default function EmployeePage() {
                 <Bar
                   dataKey="count"
                   name="Unresolved Issues"
-                  fill="#F26A21"
+                  fill="var(--accent)"
                   radius={[6, 6, 0, 0]}
                 />
               </BarChart>
@@ -403,7 +403,7 @@ export default function EmployeePage() {
           </div>
           <button
             onClick={loadData}
-            className="text-xs font-semibold text-[#F26A21] hover:underline"
+            className="text-xs font-semibold text-[var(--accent-text)] hover:underline"
           >
             Refresh Findings
           </button>
@@ -467,7 +467,7 @@ export default function EmployeePage() {
                   value={proposedValue}
                   onChange={(e) => setProposedValue(e.target.value)}
                   placeholder="e.g. 08:30 to 17:00, or 8.0 billable hours"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-xs text-slate-800 dark:text-white focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-xs text-slate-800 dark:text-white focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
                 />
               </div>
 
@@ -480,7 +480,7 @@ export default function EmployeePage() {
                     type="button"
                     onClick={handleGenerateAiDraft}
                     disabled={aiDraftLoading}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-[#F26A21] font-semibold text-[11px] transition disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--accent-bg-subtle)] hover:bg-[var(--accent-glow)] text-[var(--accent-text)] border border-[var(--accent-border-subtle)] font-semibold text-[11px] transition disabled:opacity-50"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
                     {aiDraftLoading ? 'Drafting...' : '✨ AI Assist Draft'}
@@ -492,7 +492,7 @@ export default function EmployeePage() {
                   value={employeeReason}
                   onChange={(e) => setEmployeeReason(e.target.value)}
                   placeholder="Explain why this discrepancy occurred (e.g., onsite client visit, turnstile sensor missed badge)..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-xs text-slate-800 dark:text-white focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-xs text-slate-800 dark:text-white focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
                 />
                 {hasAiDrafted && (
                   <div className="mt-2 flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1.5 rounded-lg border border-amber-200/50">
@@ -513,7 +513,7 @@ export default function EmployeePage() {
                 <button
                   type="submit"
                   disabled={isSubmittingCorr}
-                  className="px-5 py-2.5 rounded-xl bg-[#F26A21] hover:bg-[#dc5612] text-white text-xs font-bold shadow-md shadow-orange-500/20 disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] border border-[var(--accent-border)] text-xs font-bold shadow-md shadow-[var(--accent-glow)] disabled:opacity-50"
                 >
                   {isSubmittingCorr ? 'Submitting...' : 'Send to Manager'}
                 </button>
@@ -529,7 +529,7 @@ export default function EmployeePage() {
           <div className="glass-panel w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl relative">
             <div className="flex items-center justify-between pb-4 border-b border-slate-200/60 dark:border-slate-700/60">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-orange-100 text-[#F26A21]">
+                <div className="p-2 rounded-xl bg-[var(--accent-bg-subtle)] text-[var(--accent-text)] border border-[var(--accent-border-subtle)]">
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
@@ -553,7 +553,7 @@ export default function EmployeePage() {
 
             {isExplainingLoading ? (
               <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-500 dark:text-slate-400">
-                <Sparkles className="w-7 h-7 text-[#F26A21] animate-spin" />
+                <Sparkles className="w-7 h-7 text-[var(--accent-text)] animate-spin" />
                 <p className="text-xs font-medium">Generating policy analysis & resolution guidance...</p>
               </div>
             ) : (
@@ -612,7 +612,7 @@ export default function EmployeePage() {
                     setProposedValue('');
                     setHasAiDrafted(false);
                   }}
-                  className="px-4 py-2 rounded-xl bg-[#F26A21] hover:bg-[#dc5612] text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-md shadow-orange-500/20"
+                  className="px-4 py-2 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] border border-[var(--accent-border)] text-xs font-bold inline-flex items-center gap-1.5 shadow-md shadow-[var(--accent-glow)]"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   Proceed to Correction

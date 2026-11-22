@@ -85,7 +85,7 @@ export default function DutiesHubPage() {
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2.5">
-              <span className="p-2.5 rounded-xl bg-orange-100 dark:bg-orange-950/60 text-[#F26A21]">
+              <span className="p-2.5 rounded-xl bg-[var(--accent-bg-subtle)] text-[var(--accent-text)] border border-[var(--accent-border-subtle)]">
                 <Briefcase className="w-6 h-6" />
               </span>
               <div>
@@ -99,7 +99,7 @@ export default function DutiesHubPage() {
             </div>
 
             <div className="mt-3.5 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300 font-medium border border-slate-200 dark:border-slate-700">
-              <Bot className="w-4 h-4 text-[#F26A21]" />
+              <Bot className="w-4 h-4 text-[var(--accent-text)]" />
               <span>Bot Prepares & Automates</span>
               <span className="text-slate-400 dark:text-slate-500">&bull;</span>
               <UserCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -113,7 +113,7 @@ export default function DutiesHubPage() {
           <div className="grid grid-cols-3 gap-2.5 w-full md:w-auto">
             <div className="p-3 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-center">
               <span className="text-[10px] font-bold text-slate-400 uppercase block">Bot Prepared</span>
-              <span className="text-xl font-extrabold text-[#F26A21]">{totalPrepared}</span>
+              <span className="text-xl font-extrabold text-[var(--accent-text)]">{totalPrepared}</span>
             </div>
             <div className="p-3 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-center">
               <span className="text-[10px] font-bold text-slate-400 uppercase block">Awaiting Approval</span>
@@ -138,20 +138,20 @@ export default function DutiesHubPage() {
             <GlassCard
               key={duty.key}
               onClick={() => navigate(`/duties/${duty.key}`)}
-              className="group cursor-pointer hover:border-[#F26A21]/60 transition-all duration-200 flex flex-col justify-between"
+              className="group cursor-pointer hover:border-[var(--accent)]/60 transition-all duration-200 flex flex-col justify-between"
             >
               <div>
                 {/* Top Badge Strip */}
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="p-2 rounded-xl bg-orange-100/70 dark:bg-orange-950/40 text-[#F26A21]">
+                    <span className="p-2 rounded-xl bg-[var(--accent-bg-subtle)] text-[var(--accent-text)] border border-[var(--accent-border-subtle)]">
                       <Icon className="w-5 h-5" />
                     </span>
                     <div>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
                         {duty.category}
                       </span>
-                      <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-[#F26A21] transition-colors leading-tight">
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-[var(--accent-text)] transition-colors leading-tight">
                         {duty.name}
                       </h3>
                     </div>
@@ -182,7 +182,7 @@ export default function DutiesHubPage() {
                 {/* Bot-vs-Human Split Breakdown */}
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 space-y-2 text-[11px] mb-4">
                   <div className="flex items-start gap-1.5 text-slate-700 dark:text-slate-200">
-                    <Bot className="w-3.5 h-3.5 text-[#F26A21] shrink-0 mt-0.5" />
+                    <Bot className="w-3.5 h-3.5 text-[var(--accent-text)] shrink-0 mt-0.5" />
                     <span className="line-clamp-1">
                       <strong>Bot:</strong> {duty.bot_actions[0]}
                     </span>
@@ -217,7 +217,7 @@ export default function DutiesHubPage() {
                   )}
                 </div>
 
-                <div className="flex items-center gap-1 text-xs font-bold text-[#F26A21] group-hover:translate-x-1 transition-transform">
+                <div className="flex items-center gap-1 text-xs font-bold text-[var(--accent-text)] group-hover:translate-x-1 transition-transform">
                   <span>Open</span>
                   <ChevronRight className="w-4 h-4" />
                 </div>

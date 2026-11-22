@@ -12,7 +12,7 @@ export default function TermsOfUsePage() {
     >
       <section>
         <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2">
-          <FileText className="w-5 h-5 text-[#F26A21]" />
+          <FileText className="w-5 h-5 text-[var(--accent-text)]" />
           1. Prototype License &amp; Evaluation Scope
         </h2>
         <p className="text-slate-600 dark:text-slate-300">
@@ -24,7 +24,7 @@ export default function TermsOfUsePage() {
 
       <section>
         <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2">
-          <ShieldAlert className="w-5 h-5 text-[#F26A21]" />
+          <ShieldAlert className="w-5 h-5 text-[var(--accent-text)]" />
           2. Simulated Data &amp; No Government Integration
         </h2>
         <p className="text-slate-600 dark:text-slate-300">
@@ -37,7 +37,7 @@ export default function TermsOfUsePage() {
 
       <section>
         <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2">
-          <CheckCircle2 className="w-5 h-5 text-[#F26A21]" />
+          <CheckCircle2 className="w-5 h-5 text-[var(--accent-text)]" />
           3. Maker-Checker Rules &amp; User Conduct
         </h2>
         <p className="text-slate-600 dark:text-slate-300 mb-2">
@@ -52,7 +52,7 @@ export default function TermsOfUsePage() {
 
       <section>
         <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2">
-          <AlertOctagon className="w-5 h-5 text-[#F26A21]" />
+          <AlertOctagon className="w-5 h-5 text-[var(--accent-text)]" />
           4. Disclaimer of Warranties &amp; Limitation of Liability
         </h2>
         <p className="text-slate-600 dark:text-slate-300">
@@ -64,7 +64,7 @@ export default function TermsOfUsePage() {
 
       <section>
         <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2">
-          <HelpCircle className="w-5 h-5 text-[#F26A21]" />
+          <HelpCircle className="w-5 h-5 text-[var(--accent-text)]" />
           5. Modifications &amp; Governing Law
         </h2>
         <p className="text-slate-600 dark:text-slate-300">

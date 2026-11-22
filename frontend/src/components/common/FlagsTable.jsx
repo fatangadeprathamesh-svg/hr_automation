@@ -62,7 +62,7 @@ export default function FlagsTable({ flags = [], onSelectFlag = null, onExplainA
                         <button
                           type="button"
                           onClick={() => onExplainAI(flag)}
-                          className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-orange-300 hover:text-[#F26A21] text-[11px] font-semibold flex items-center gap-1 transition-colors"
+                          className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-[var(--accent)] hover:text-[var(--accent-text)] text-[11px] font-semibold flex items-center gap-1 transition-colors"
                           title="View plain-English rule explainer"
                         >
                           <HelpCircle className="w-3.5 h-3.5" />
@@ -73,7 +73,7 @@ export default function FlagsTable({ flags = [], onSelectFlag = null, onExplainA
                         <button
                           type="button"
                           onClick={() => onSelectFlag(flag)}
-                          className="px-3 py-1 rounded-lg bg-[#F26A21] hover:bg-[#dc5612] text-white text-[11px] font-bold flex items-center gap-1 shadow-sm shadow-orange-500/20 transition-colors"
+                          className="px-3 py-1 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] border border-[var(--accent-border)] text-[11px] font-bold flex items-center gap-1 shadow-sm shadow-[var(--accent-glow)] transition-colors"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
                           <span>Correct</span>

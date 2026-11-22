@@ -32,8 +32,8 @@ export default function ReadinessRing({ percentage = 78, size = 180, strokeWidth
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (animatedValue / 100) * circumference;
 
-  // Status color: Accent #F26A21 when in progress, Emerald #10B981 when 100% complete
-  const strokeColor = percentage === 100 ? '#10B981' : percentage >= 80 ? '#F26A21' : '#F59E0B';
+  // Status color: Status Success when 100% complete, Accent Gold when in progress, Status Warning when low
+  const strokeColor = percentage === 100 ? 'var(--status-success)' : percentage >= 80 ? 'var(--accent)' : 'var(--status-warning)';
 
   return (
     <div className="relative inline-flex flex-col items-center justify-center p-4">

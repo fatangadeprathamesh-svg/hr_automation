@@ -95,7 +95,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md my-auto flex flex-col items-center">
         {/* Brand Header */}
       <div className="mb-6 text-center">
-        <div className="w-14 h-14 rounded-2xl bg-[#F26A21] flex items-center justify-center text-white mx-auto shadow-lg shadow-orange-500/30 mb-3">
+        <div className="w-14 h-14 rounded-2xl bg-[var(--accent)] text-[var(--accent-ink)] flex items-center justify-center mx-auto shadow-lg shadow-[var(--accent)]/20 mb-3">
           <FileSearch className="w-8 h-8" />
         </div>
         <h1 className="text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">
@@ -108,7 +108,7 @@ export default function LoginPage() {
 
       {/* Main Glassmorphic Auth Card */}
       <div className="glass-panel w-full max-w-md rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-        {/* Sliding Orange Blade Navigation */}
+        {/* Sliding Gold Blade Navigation */}
         <div className="relative mb-6">
           {/* Background track for tabs */}
           <div
@@ -116,9 +116,9 @@ export default function LoginPage() {
             role="tablist"
             aria-label="Authentication mode"
           >
-            {/* Sliding orange blade (Desktop / Tablets) */}
+            {/* Sliding gold blade (Desktop / Tablets) */}
             <div
-              className="absolute top-1 bottom-1 rounded-xl bg-[#F26A21] shadow-md shadow-orange-500/30 transition-transform duration-300 ease-out hidden sm:block"
+              className="absolute top-1 bottom-1 rounded-xl bg-[var(--accent)] shadow-md shadow-[var(--accent)]/20 transition-transform duration-300 ease-out hidden sm:block"
               style={{
                 width: 'calc(50% - 4px)',
                 transform: activeTab === 0 ? 'translateX(0%)' : 'translateX(100%)',
@@ -134,9 +134,9 @@ export default function LoginPage() {
               tabIndex={0}
               onClick={() => setActiveTab(0)}
               onKeyDown={(e) => handleKeyDown(e, 0)}
-              className={`flex-1 py-2.5 text-xs font-bold rounded-xl relative z-10 transition-colors text-center focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none ${
+              className={`flex-1 py-2.5 text-xs font-bold rounded-xl relative z-10 transition-colors text-center focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none ${
                 activeTab === 0
-                  ? 'text-white sm:text-white bg-[#F26A21] sm:bg-transparent shadow-sm sm:shadow-none'
+                  ? 'text-[var(--accent-ink)] sm:text-[var(--accent-ink)] bg-[var(--accent)] sm:bg-transparent shadow-sm sm:shadow-none'
                   : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -151,9 +151,9 @@ export default function LoginPage() {
               tabIndex={0}
               onClick={() => setActiveTab(1)}
               onKeyDown={(e) => handleKeyDown(e, 1)}
-              className={`flex-1 py-2.5 text-xs font-bold rounded-xl relative z-10 transition-colors text-center focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none ${
+              className={`flex-1 py-2.5 text-xs font-bold rounded-xl relative z-10 transition-colors text-center focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none ${
                 activeTab === 1
-                  ? 'text-white sm:text-white bg-[#F26A21] sm:bg-transparent shadow-sm sm:shadow-none'
+                  ? 'text-[var(--accent-ink)] sm:text-[var(--accent-ink)] bg-[var(--accent)] sm:bg-transparent shadow-sm sm:shadow-none'
                   : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -180,7 +180,7 @@ export default function LoginPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Alice Employee"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-sm text-slate-800 dark:text-white placeholder-slate-400 focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-sm text-slate-800 dark:text-white placeholder-slate-400 focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
                 />
               </div>
             </div>
@@ -198,7 +198,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="alice@company.com"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-sm text-slate-800 dark:text-white placeholder-slate-400 focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-sm text-slate-800 dark:text-white placeholder-slate-400 focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
               />
             </div>
           </div>
@@ -215,7 +215,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-sm text-slate-800 dark:text-white placeholder-slate-400 focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-sm text-slate-800 dark:text-white placeholder-slate-400 focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
               />
             </div>
           </div>
@@ -224,7 +224,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 py-3 rounded-xl bg-[#F26A21] hover:bg-[#dc5612] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 transition-all duration-150 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#F26A21] focus-visible:outline-none"
+            className="btn-accent w-full mt-2 py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none transition-all duration-150"
           >
             {loading ? (
               <span>Verifying credentials...</span>
@@ -258,7 +258,7 @@ export default function LoginPage() {
               type="button"
               onClick={handleCustomGoogleClick}
               disabled={loading}
-              className="w-full py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs flex items-center justify-center gap-2.5 shadow-sm transition-all duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#F26A21] focus-visible:outline-none"
+              className="w-full py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs flex items-center justify-center gap-2.5 shadow-sm transition-all duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path
@@ -296,7 +296,7 @@ export default function LoginPage() {
                 setPassword('Password123!');
                 setFullName('Alice Employee');
               }}
-              className="py-1.5 px-2 rounded-lg text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-orange-50 dark:hover:bg-slate-700 transition-colors border border-slate-200 dark:border-slate-700"
+              className="py-1.5 px-2 rounded-lg text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-[var(--accent-bg-subtle)] hover:text-[var(--accent-text)] hover:border-[var(--accent-border-subtle)] transition-colors border border-slate-200 dark:border-slate-700"
             >
               Alice (Emp)
             </button>
@@ -307,7 +307,7 @@ export default function LoginPage() {
                 setPassword('Password123!');
                 setFullName('Bob Manager');
               }}
-              className="py-1.5 px-2 rounded-lg text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-orange-50 dark:hover:bg-slate-700 transition-colors border border-slate-200 dark:border-slate-700"
+              className="py-1.5 px-2 rounded-lg text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-[var(--accent-bg-subtle)] hover:text-[var(--accent-text)] hover:border-[var(--accent-border-subtle)] transition-colors border border-slate-200 dark:border-slate-700"
             >
               Bob (Mgr)
             </button>
@@ -318,7 +318,7 @@ export default function LoginPage() {
                 setPassword('Password123!');
                 setFullName('Carol HR');
               }}
-              className="py-1.5 px-2 rounded-lg text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-orange-50 dark:hover:bg-slate-700 transition-colors border border-slate-200 dark:border-slate-700"
+              className="py-1.5 px-2 rounded-lg text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-[var(--accent-bg-subtle)] hover:text-[var(--accent-text)] hover:border-[var(--accent-border-subtle)] transition-colors border border-slate-200 dark:border-slate-700"
             >
               Carol (HR)
             </button>

@@ -38,10 +38,10 @@ export default function ContactPage() {
 
           <div className="space-y-4 text-xs">
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-start gap-3">
-              <Mail className="w-4 h-4 text-[#F26A21] shrink-0 mt-0.5" />
+              <Mail className="w-4 h-4 text-[var(--accent-text)] shrink-0 mt-0.5" />
               <div>
                 <strong className="block text-slate-900 dark:text-white font-semibold">Grievance Officer Email:</strong>
-                <a href={`mailto:${SITE_CONFIG.grievanceOfficer.email}`} className="text-[#F26A21] underline">
+                <a href={`mailto:${SITE_CONFIG.grievanceOfficer.email}`} className="text-[var(--accent-text)] underline">
                   {SITE_CONFIG.grievanceOfficer.email}
                 </a>
                 <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">
@@ -51,7 +51,7 @@ export default function ContactPage() {
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-start gap-3">
-              <Phone className="w-4 h-4 text-[#F26A21] shrink-0 mt-0.5" />
+              <Phone className="w-4 h-4 text-[var(--accent-text)] shrink-0 mt-0.5" />
               <div>
                 <strong className="block text-slate-900 dark:text-white font-semibold">Direct Telephone:</strong>
                 <span className="text-slate-700 dark:text-slate-300">{SITE_CONFIG.grievanceOfficer.phone}</span>
@@ -60,7 +60,7 @@ export default function ContactPage() {
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-start gap-3">
-              <MapPin className="w-4 h-4 text-[#F26A21] shrink-0 mt-0.5" />
+              <MapPin className="w-4 h-4 text-[var(--accent-text)] shrink-0 mt-0.5" />
               <div>
                 <strong className="block text-slate-900 dark:text-white font-semibold">Physical Registered Address:</strong>
                 <span className="text-slate-700 dark:text-slate-300 leading-relaxed block mt-0.5">
@@ -69,8 +69,8 @@ export default function ContactPage() {
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-orange-50/60 dark:bg-orange-950/30 border border-orange-200/60 dark:border-orange-800/60 flex items-start gap-3">
-              <Clock className="w-4 h-4 text-[#F26A21] shrink-0 mt-0.5" />
+            <div className="p-4 rounded-2xl bg-[var(--accent-bg-subtle)] border border-[var(--accent-border-subtle)] flex items-start gap-3">
+              <Clock className="w-4 h-4 text-[var(--accent-text)] shrink-0 mt-0.5" />
               <div className="text-[11px] text-slate-700 dark:text-slate-300">
                 <strong>Statutory SLA:</strong> {SITE_CONFIG.grievanceOfficer.responseTimeline}
               </div>
@@ -113,7 +113,7 @@ export default function ContactPage() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:border-[#F26A21] focus:ring-2 focus:ring-orange-500/20 focus:outline-none"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20 focus:outline-none"
                 />
               </div>
 
@@ -124,7 +124,7 @@ export default function ContactPage() {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:border-[#F26A21] focus:ring-2 focus:ring-orange-500/20 focus:outline-none"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20 focus:outline-none"
                 />
               </div>
 
@@ -135,7 +135,7 @@ export default function ContactPage() {
                   required
                   value={formData.subject}
                   onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:border-[#F26A21] focus:ring-2 focus:ring-orange-500/20 focus:outline-none"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20 focus:outline-none"
                 />
               </div>
 
@@ -147,13 +147,13 @@ export default function ContactPage() {
                   placeholder="Describe your inquiry, data correction request, or evaluation feedback..."
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:border-[#F26A21] focus:ring-2 focus:ring-orange-500/20 focus:outline-none"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20 focus:outline-none"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-[#F26A21] hover:bg-[#dc5612] text-white shadow-md shadow-orange-500/25 transition-all flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none"
+                className="btn-accent w-full py-2.5 px-4 rounded-xl text-xs font-bold shadow-md transition-all flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
               >
                 <Send className="w-3.5 h-3.5" />
                 Submit Inquiry

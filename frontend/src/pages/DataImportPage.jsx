@@ -300,7 +300,7 @@ export default function DataImportPage() {
       <GlassCard className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-orange-100 dark:bg-orange-950/60 text-[#F26A21]">
+            <span className="p-2 rounded-xl bg-[var(--accent-bg-subtle)] text-[var(--accent-text)]">
               <FileSpreadsheet className="w-5 h-5" />
             </span>
             <h1 className="text-xl font-bold text-slate-900 dark:text-white">Master HR Data Import</h1>
@@ -316,7 +316,7 @@ export default function DataImportPage() {
             onClick={() => setActiveTab('upload')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
               activeTab === 'upload'
-                ? 'bg-[#F26A21] text-white shadow-sm'
+                ? 'bg-[var(--accent)] text-[var(--accent-ink)] font-bold shadow-sm'
                 : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
@@ -327,7 +327,7 @@ export default function DataImportPage() {
             onClick={() => setActiveTab('records')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
               activeTab === 'records'
-                ? 'bg-[#F26A21] text-white shadow-sm'
+                ? 'bg-[var(--accent)] text-[var(--accent-ink)] font-bold shadow-sm'
                 : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
@@ -341,7 +341,7 @@ export default function DataImportPage() {
             }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
               activeTab === 'history'
-                ? 'bg-[#F26A21] text-white shadow-sm'
+                ? 'bg-[var(--accent)] text-[var(--accent-ink)] font-bold shadow-sm'
                 : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
@@ -428,8 +428,8 @@ export default function DataImportPage() {
               onClick={() => fileInputRef.current?.click()}
               className={`border-2 border-dashed rounded-3xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
                 dragActive
-                  ? 'border-[#F26A21] bg-orange-50/50 dark:bg-orange-950/20 scale-[0.99]'
-                  : 'border-slate-300 dark:border-slate-700 hover:border-[#F26A21] bg-slate-50/40 dark:bg-slate-900/30'
+                  ? 'border-[var(--accent)] bg-[var(--accent-bg-subtle)] scale-[0.99]'
+                  : 'border-slate-300 dark:border-slate-700 hover:border-[var(--accent)] bg-slate-50/40 dark:bg-slate-900/30'
               }`}
             >
               <input
@@ -439,7 +439,7 @@ export default function DataImportPage() {
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              <div className="w-14 h-14 rounded-2xl bg-orange-100 dark:bg-orange-950/60 text-[#F26A21] flex items-center justify-center mb-3 shadow-inner">
+              <div className="w-14 h-14 rounded-2xl bg-[var(--accent-bg-subtle)] text-[var(--accent-text)] flex items-center justify-center mb-3 shadow-inner">
                 <UploadCloud className="w-7 h-7" />
               </div>
               <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
@@ -451,7 +451,7 @@ export default function DataImportPage() {
 
               {selectedFile && (
                 <div className="mt-4 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-700 dark:text-slate-300 shadow-sm flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-[#F26A21]" />
+                  <FileText className="w-4 h-4 text-[var(--accent-text)]" />
                   <span>{selectedFile.name}</span>
                   <span className="text-slate-400">|</span>
                   <span>{(selectedFile.size / (1024 * 1024)).toFixed(2)} MB</span>
@@ -475,7 +475,7 @@ export default function DataImportPage() {
                 type="button"
                 onClick={handleStartUpload}
                 disabled={!selectedFile || isUploading}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#F26A21] hover:bg-orange-600 text-white text-xs font-semibold shadow-md shadow-orange-500/20 disabled:opacity-50 transition-all cursor-pointer disabled:cursor-not-allowed"
+                className="btn-accent flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold shadow-md disabled:opacity-50 transition-all cursor-pointer disabled:cursor-not-allowed"
               >
                 {isUploading ? (
                   <>
@@ -506,7 +506,7 @@ export default function DataImportPage() {
                       <span>Time: {currentUpload.duration_seconds.toFixed(2)}s</span>
                     )}
                     {currentUpload.rows_per_second > 0 && (
-                      <span className="text-[#F26A21] font-bold">
+                      <span className="text-[var(--accent-text)] font-bold">
                         {currentUpload.rows_per_second.toLocaleString()} rows/s
                       </span>
                     )}
@@ -521,7 +521,7 @@ export default function DataImportPage() {
                         ? 'bg-rose-500'
                         : currentUpload.status === 'done'
                         ? 'bg-emerald-500'
-                        : 'bg-[#F26A21] animate-pulse'
+                        : 'bg-[var(--accent)] animate-pulse'
                     }`}
                     style={{
                       width:
@@ -646,7 +646,7 @@ export default function DataImportPage() {
                   }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
                     selectedRecordType === t.id
-                      ? 'bg-[#F26A21] text-white shadow-sm'
+                      ? 'bg-[var(--accent)] text-[var(--accent-ink)] font-bold shadow-sm'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                   }`}
                 >
@@ -669,7 +669,7 @@ export default function DataImportPage() {
                   placeholder="Search by employee name, ID, or record ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#F26A21]"
+                  className="w-full pl-9 pr-4 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                 />
                 {searchQuery && (
                   <button
@@ -688,7 +688,7 @@ export default function DataImportPage() {
                     setSelectedDepartment(e.target.value);
                     setRecordsPage(1);
                   }}
-                  className="px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#F26A21]"
+                  className="px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                 >
                   <option value="">All Departments</option>
                   <option value="Engineering">Engineering</option>
@@ -707,7 +707,7 @@ export default function DataImportPage() {
                     setRecordsPageSize(Number(e.target.value));
                     setRecordsPage(1);
                   }}
-                  className="px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#F26A21]"
+                  className="px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                 >
                   <option value={25}>25 / page</option>
                   <option value={50}>50 / page</option>

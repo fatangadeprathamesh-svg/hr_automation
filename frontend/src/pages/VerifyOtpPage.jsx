@@ -146,7 +146,7 @@ export default function VerifyOtpPage() {
       <div className="w-full max-w-md my-auto flex flex-col items-center">
         {/* Brand Header */}
       <div className="mb-6 text-center">
-        <div className="w-14 h-14 rounded-2xl bg-[#F26A21] flex items-center justify-center text-white mx-auto shadow-lg shadow-orange-500/30 mb-3">
+        <div className="w-14 h-14 rounded-2xl bg-[var(--accent)] text-[var(--accent-ink)] flex items-center justify-center mx-auto shadow-lg shadow-[var(--accent)]/20 mb-3">
           <ShieldCheck className="w-8 h-8" />
         </div>
         <h1 className="text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">
@@ -161,12 +161,12 @@ export default function VerifyOtpPage() {
       {/* Main Glassmorphic Verification Card */}
       <div className="glass-panel w-full max-w-md rounded-3xl p-6 sm:p-8 shadow-2xl relative">
         {/* DEV Mode Prominent Banner */}
-        <div className="mb-6 px-4 py-2.5 rounded-xl bg-orange-100/90 dark:bg-orange-950/60 border border-orange-200 dark:border-orange-800 flex items-center justify-between text-xs text-[#F26A21] font-semibold">
+        <div className="mb-6 px-4 py-2.5 rounded-xl bg-[var(--accent-bg-subtle)] border border-[var(--border)] flex items-center justify-between text-xs text-[var(--accent-text)] font-semibold">
           <span className="flex items-center gap-1.5">
             <ShieldAlert className="w-4 h-4 shrink-0" />
             DEV mode active
           </span>
-          <span className="bg-[#F26A21] text-white px-2 py-0.5 rounded-md font-mono text-[11px]">
+          <span className="bg-[var(--accent)] text-[var(--accent-ink)] px-2 py-0.5 rounded-md font-mono text-[11px] font-bold">
             Code: {devCodeDisplay}
           </span>
         </div>
@@ -185,7 +185,7 @@ export default function VerifyOtpPage() {
               </span>
             </div>
           ) : (
-            /* Six individual square boxes with orange glow and shake */
+            /* Six individual square boxes with gold focus ring and shake */
             <div
               className={`flex items-center justify-between gap-2 sm:gap-3 ${
                 shake ? 'animate-shake' : ''
@@ -204,7 +204,7 @@ export default function VerifyOtpPage() {
                   onKeyDown={(e) => handleKeyDown(idx, e)}
                   onPaste={handlePaste}
                   aria-label={`Digit ${idx + 1}`}
-                  className="w-12 h-14 sm:w-14 sm:h-16 text-center text-xl sm:text-2xl font-bold font-mono rounded-2xl border border-slate-300 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-white transition-all duration-150 focus:border-[#F26A21] focus:ring-4 focus:ring-orange-500/25 focus:shadow-[0_0_15px_rgba(242,106,33,0.35)] focus:outline-none"
+                  className="w-12 h-14 sm:w-14 sm:h-16 text-center text-xl sm:text-2xl font-bold font-mono rounded-2xl border border-slate-300 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-white transition-all duration-150 focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent)]/25 focus:shadow-[0_0_15px_rgba(212,168,75,0.35)] focus:outline-none"
                 />
               ))}
             </div>
@@ -216,7 +216,7 @@ export default function VerifyOtpPage() {
           <button
             type="button"
             onClick={() => navigate('/login')}
-            className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-medium focus-visible:ring-2 focus-visible:ring-[#F26A21] rounded-lg p-1"
+            className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-medium focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded-lg p-1"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             Back to login
@@ -229,8 +229,8 @@ export default function VerifyOtpPage() {
             className={`flex items-center gap-1 font-semibold ${
               resendSeconds > 0
                 ? 'text-slate-400 dark:text-slate-600 cursor-not-allowed'
-                : 'text-[#F26A21] hover:text-[#dc5612] cursor-pointer'
-            } focus-visible:ring-2 focus-visible:ring-[#F26A21] rounded-lg p-1`}
+                : 'text-[var(--accent-text)] hover:opacity-80 cursor-pointer'
+            } focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded-lg p-1`}
           >
             <RotateCw className="w-3.5 h-3.5" />
             {resendSeconds > 0 ? `Resend code (${resendSeconds}s)` : 'Resend code'}

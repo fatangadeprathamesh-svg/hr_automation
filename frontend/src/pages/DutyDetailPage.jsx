@@ -243,7 +243,7 @@ export default function DutyDetailPage() {
       {/* Main Duty Header Card */}
       <GlassCard className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 sm:p-7">
         <div className="flex items-start gap-3.5">
-          <span className="p-3 rounded-2xl bg-orange-100 dark:bg-orange-950/60 text-[#F26A21] shrink-0">
+          <span className="p-3 rounded-2xl bg-[var(--accent-bg-subtle)] text-[var(--accent-text)] border border-[var(--accent-border-subtle)] shrink-0">
             <Icon className="w-7 h-7" />
           </span>
           <div>
@@ -269,16 +269,16 @@ export default function DutyDetailPage() {
           </div>
           <div className="p-3 rounded-xl bg-white/70 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 text-center min-w-[90px]">
             <span className="text-[10px] font-bold text-slate-400 uppercase block">Bot Prepared</span>
-            <span className="text-xl font-extrabold text-[#F26A21]">{metrics.prepared_by_bot}</span>
+            <span className="text-xl font-extrabold text-[var(--accent-text)]">{metrics.prepared_by_bot}</span>
           </div>
         </div>
       </GlassCard>
 
       {/* MANDATORY STRIP: Bot Prepared / Human Approves */}
-      <div className="glass-panel rounded-2xl px-5 py-3.5 border-l-4 border-l-[#F26A21] flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div className="glass-panel rounded-2xl px-5 py-3.5 border-l-4 border-l-[var(--accent)] flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-white">
-            <Bot className="w-4 h-4 text-[#F26A21]" />
+            <Bot className="w-4 h-4 text-[var(--accent-text)]" />
             <span>Bot Prepares:</span>
             <span className="font-normal text-slate-600 dark:text-slate-300">
               {config.bot_actions?.[0] || 'Automated data aggregation'}
@@ -331,13 +331,13 @@ export default function DutyDetailPage() {
           onClick={() => setActiveTab('queue')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'queue'
-              ? 'bg-[#F26A21] text-white shadow-md shadow-orange-500/20'
+              ? 'bg-[var(--accent)] text-[var(--accent-ink)] font-bold shadow-md shadow-[var(--accent-glow)]'
               : 'text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-800'
           }`}
         >
           <Clock className="w-4 h-4" />
           <span>Approval Queue</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'queue' ? 'bg-white/20' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200'}`}>
+          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'queue' ? 'bg-black/20 text-black' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200'}`}>
             {queueTasks.length}
           </span>
         </button>
@@ -346,7 +346,7 @@ export default function DutyDetailPage() {
           onClick={() => setActiveTab('bot')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'bot'
-              ? 'bg-[#F26A21] text-white shadow-md shadow-orange-500/20'
+              ? 'bg-[var(--accent)] text-[var(--accent-ink)] font-bold shadow-md shadow-[var(--accent-glow)]'
               : 'text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-800'
           }`}
         >
@@ -358,13 +358,13 @@ export default function DutyDetailPage() {
           onClick={() => setActiveTab('records')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'records'
-              ? 'bg-[#F26A21] text-white shadow-md shadow-orange-500/20'
+              ? 'bg-[var(--accent)] text-[var(--accent-ink)] font-bold shadow-md shadow-[var(--accent-glow)]'
               : 'text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-800'
           }`}
         >
           <FileText className="w-4 h-4" />
           <span>Records & Artifacts</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'records' ? 'bg-white/20' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200'}`}>
+          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'records' ? 'bg-black/20 text-black' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200'}`}>
             {recordTasks.length}
           </span>
         </button>
@@ -472,7 +472,7 @@ export default function DutyDetailPage() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Bot className="w-5 h-5 text-[#F26A21]" />
+                  <Bot className="w-5 h-5 text-[var(--accent-text)]" />
                   <span>Bot Automated Capabilities for {config.name}</span>
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -484,7 +484,7 @@ export default function DutyDetailPage() {
                 type="button"
                 disabled={botRunning}
                 onClick={handleTriggerBot}
-                className="px-4 py-2 rounded-xl bg-[#F26A21] hover:bg-[#dc5612] text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-orange-500/25 transition-all shrink-0 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] border border-[var(--accent-border)] font-bold text-xs flex items-center gap-2 shadow-lg shadow-[var(--accent-glow)] transition-all shrink-0 cursor-pointer"
               >
                 <Sparkles className={`w-4 h-4 ${botRunning ? 'animate-spin' : ''}`} />
                 <span>{botRunning ? 'Executing Bot Automation...' : 'Run Bot Automation & Prep'}</span>
@@ -495,7 +495,7 @@ export default function DutyDetailPage() {
             <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
               {config.bot_actions?.map((action, idx) => (
                 <div key={idx} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50 flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300">
-                  <span className="w-5 h-5 rounded-full bg-orange-100 text-[#F26A21] flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                  <span className="w-5 h-5 rounded-full bg-[var(--accent-bg-subtle)] text-[var(--accent-text)] border border-[var(--accent-border-subtle)] flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
                     {idx + 1}
                   </span>
                   <span>{action}</span>
@@ -506,7 +506,7 @@ export default function DutyDetailPage() {
             {/* Latest run result */}
             {botRunResult && (
               <div className="mt-5 p-4 rounded-xl bg-slate-900 text-slate-100 font-mono text-xs overflow-x-auto">
-                <span className="text-[#F26A21] font-bold block mb-1">&gt; Bot Execution Output:</span>
+                <span className="text-[var(--accent-text)] font-bold block mb-1">&gt; Bot Execution Output:</span>
                 <pre>{JSON.stringify(botRunResult, null, 2)}</pre>
               </div>
             )}
@@ -536,12 +536,12 @@ export default function DutyDetailPage() {
                     rel="noreferrer"
                     className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 hover:bg-white text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 transition-colors"
                   >
-                    <Printer className="w-4 h-4 text-[#F26A21]" />
+                    <Printer className="w-4 h-4 text-[var(--accent-text)]" />
                     <span>Print My Payslip</span>
                   </a>
                   <a
                     href={`${API_BASE}/api/duties/payroll_statutory/challans-csv`}
-                    className="px-3 py-1.5 rounded-xl bg-[#F26A21] hover:bg-[#dc5612] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
+                    className="px-3 py-1.5 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] border border-[var(--accent-border)] text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
                   >
                     <Download className="w-4 h-4" />
                     <span>Challans CSV</span>
@@ -568,12 +568,12 @@ export default function DutyDetailPage() {
                     href={`${API_BASE}/api/duties/labour_compliance/registers-csv?register_type=form_b_wages`}
                     className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 hover:bg-white text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 transition-colors"
                   >
-                    <Download className="w-4 h-4 text-[#F26A21]" />
+                    <Download className="w-4 h-4 text-[var(--accent-text)]" />
                     <span>Form B Wages (CSV)</span>
                   </a>
                   <a
                     href={`${API_BASE}/api/duties/labour_compliance/registers-csv?register_type=form_d_muster`}
-                    className="px-3 py-1.5 rounded-xl bg-[#F26A21] hover:bg-[#dc5612] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
+                    className="px-3 py-1.5 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] border border-[var(--accent-border)] text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
                   >
                     <Download className="w-4 h-4" />
                     <span>Form D Muster (CSV)</span>
@@ -611,7 +611,7 @@ export default function DutyDetailPage() {
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-center">
                   <span className="text-[10px] font-bold text-slate-400 uppercase block">Sensitized</span>
-                  <span className="text-xl font-extrabold text-[#F26A21]">{poshReport.aggregate_counts?.employees_sensitized}</span>
+                  <span className="text-xl font-extrabold text-[var(--accent-text)]">{poshReport.aggregate_counts?.employees_sensitized}</span>
                 </div>
               </div>
             </GlassCard>
@@ -622,7 +622,7 @@ export default function DutyDetailPage() {
             <GlassCard className="p-6 space-y-4">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-[#F26A21]" />
+                  <Sparkles className="w-5 h-5 text-[var(--accent-text)]" />
                   <span>Test Leave Policy Auto-Approval Engine</span>
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -670,7 +670,7 @@ export default function DutyDetailPage() {
                 <button
                   type="submit"
                   disabled={leaveSubmitting}
-                  className="w-full p-2 rounded-xl bg-[#F26A21] hover:bg-[#dc5612] text-white text-xs font-bold transition-all shadow-md shadow-orange-500/25 flex items-center justify-center gap-1.5"
+                  className="w-full p-2 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] border border-[var(--accent-border)] text-xs font-bold transition-all shadow-md shadow-[var(--accent-glow)] flex items-center justify-center gap-1.5"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>{leaveSubmitting ? 'Evaluating...' : 'Submit & Test'}</span>
@@ -702,7 +702,7 @@ export default function DutyDetailPage() {
             <GlassCard className="p-6 space-y-4">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Search className="w-5 h-5 text-[#F26A21]" />
+                  <Search className="w-5 h-5 text-[var(--accent-text)]" />
                   <span>Deterministic Policy Library Search (No External AI)</span>
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -721,7 +721,7 @@ export default function DutyDetailPage() {
                 <button
                   type="submit"
                   disabled={policySearching}
-                  className="px-4 py-2.5 rounded-xl bg-[#F26A21] hover:bg-[#dc5612] text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+                  className="px-4 py-2.5 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] border border-[var(--accent-border)] text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
                 >
                   <Search className="w-4 h-4" />
                   <span>Search</span>
@@ -792,7 +792,7 @@ export default function DutyDetailPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
             <h3 className="text-base font-bold text-slate-900 dark:text-white capitalize flex items-center gap-2">
-              <UserCheck className="w-5 h-5 text-[#F26A21]" />
+              <UserCheck className="w-5 h-5 text-[var(--accent-text)]" />
               <span>Confirm {decisionAction}</span>
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -824,7 +824,7 @@ export default function DutyDetailPage() {
                 type="button"
                 disabled={isSubmittingDecision}
                 onClick={handleConfirmDecision}
-                className="px-4 py-1.5 rounded-xl bg-[#F26A21] hover:bg-[#dc5612] text-white text-xs font-bold transition-all shadow-md shadow-orange-500/25 cursor-pointer"
+                className="px-4 py-1.5 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] border border-[var(--accent-border)] text-xs font-bold transition-all shadow-md shadow-[var(--accent-glow)] cursor-pointer"
               >
                 {isSubmittingDecision ? 'Recording in Ledger...' : 'Confirm Decision'}
               </button>

@@ -97,7 +97,7 @@ export default function AuditLogPage() {
       <GlassCard className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-orange-100 dark:bg-orange-950/60 text-[#F26A21]">
+            <span className="p-2 rounded-xl bg-[var(--accent-bg-subtle)] text-[var(--accent-text)]">
               <Lock className="w-5 h-5" />
             </span>
             <div>
@@ -115,7 +115,7 @@ export default function AuditLogPage() {
           type="button"
           disabled={isVerifying}
           onClick={handleVerifyIntegrity}
-          className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#F26A21] hover:bg-[#dc5612] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-orange-500/20 disabled:opacity-50 transition-colors"
+          className="btn-accent w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md disabled:opacity-50 transition-colors"
         >
           <RefreshCw className={`w-4 h-4 ${isVerifying ? 'animate-spin' : ''}`} />
           <span>{isVerifying ? 'Verifying Hashes...' : 'Verify Ledger Integrity'}</span>

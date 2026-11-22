@@ -21,7 +21,7 @@ export default function GlassTooltip({ active, payload, label, unit = '' }) {
           <div key={`item-${index}`} className="flex items-center gap-2">
             <span
               className="w-2.5 h-2.5 rounded-full inline-block"
-              style={{ backgroundColor: entry.color || entry.fill || '#F26A21' }}
+              style={{ backgroundColor: entry.color || entry.fill || 'var(--accent)' }}
             />
             <span className="text-slate-500 dark:text-slate-400 capitalize">
               {entry.name || 'Value'}:

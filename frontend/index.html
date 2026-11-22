@@ -1,10 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Month-End HR Self-Audit Assistant</title>
-    <!-- Tailwind CSS CDN for reliable instant dev styling -->
+    <!-- Brand Gold Favicon -->
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='6' fill='%23121933'/><circle cx='12' cy='12' r='6' fill='%23D4A84B'/></svg>"
+    />
+    <!-- Tailwind CSS CDN for instant styling mapped to CSS theme tokens -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -12,12 +18,31 @@
         theme: {
           extend: {
             colors: {
-              brand: {
-                50: '#f0f9ff',
-                500: '#0284c7',
-                600: '#0369a1',
-                700: '#075985',
-                900: '#0c4a6e',
+              palette: {
+                bg: 'var(--bg)',
+                surface: 'var(--surface)',
+                'surface-2': 'var(--surface-2)',
+                border: 'var(--border)',
+                text: 'var(--text)',
+                muted: 'var(--text-muted)',
+                accent: 'var(--accent)',
+                'accent-ink': 'var(--accent-ink)',
+                'accent-text': 'var(--accent-text)',
+                'accent-hover': 'var(--accent-hover)',
+              },
+              status: {
+                error: 'var(--status-error)',
+                'error-bg': 'var(--status-error-bg)',
+                'error-border': 'var(--status-error-border)',
+                warning: 'var(--status-warning)',
+                'warning-bg': 'var(--status-warning-bg)',
+                'warning-border': 'var(--status-warning-border)',
+                success: 'var(--status-success)',
+                'success-bg': 'var(--status-success-bg)',
+                'success-border': 'var(--status-success-border)',
+                info: 'var(--status-info)',
+                'info-bg': 'var(--status-info-bg)',
+                'info-border': 'var(--status-info-border)',
               }
             }
           }
@@ -25,18 +50,20 @@
       }
     </script>
     <script>
-      // Early theme detection to prevent flash of wrong theme (checks both persistent and session storage)
+      // Early theme detection to prevent flash of wrong theme (DARK THEME IS DEFAULT)
       try {
         var saved = localStorage.getItem('hr_theme') || sessionStorage.getItem('hr_theme');
-        if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-          document.documentElement.classList.add('dark');
-        } else {
+        if (saved === 'light') {
           document.documentElement.classList.remove('dark');
+        } else {
+          document.documentElement.classList.add('dark');
         }
-      } catch (e) {}
+      } catch (e) {
+        document.documentElement.classList.add('dark');
+      }
     </script>
   </head>
-  <body class="bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-200">
+  <body class="bg-[var(--bg)] text-[var(--text)] min-h-screen transition-colors duration-200">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

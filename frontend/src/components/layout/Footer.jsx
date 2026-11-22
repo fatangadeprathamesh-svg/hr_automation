@@ -29,28 +29,28 @@ export default function Footer({ className = '' }) {
         >
           <Link
             to="/privacy"
-            className="hover:text-[#F26A21] dark:hover:text-[#F26A21] transition-colors focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none rounded-md px-1 py-0.5"
+            className="hover:text-[var(--accent-text)] transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none rounded-md px-1 py-0.5"
           >
             Privacy Policy
           </Link>
           <span className="text-slate-300 dark:text-slate-700" aria-hidden="true">&bull;</span>
           <Link
             to="/terms"
-            className="hover:text-[#F26A21] dark:hover:text-[#F26A21] transition-colors focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none rounded-md px-1 py-0.5"
+            className="hover:text-[var(--accent-text)] transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none rounded-md px-1 py-0.5"
           >
             Terms of Use
           </Link>
           <span className="text-slate-300 dark:text-slate-700" aria-hidden="true">&bull;</span>
           <Link
             to="/cookies"
-            className="hover:text-[#F26A21] dark:hover:text-[#F26A21] transition-colors focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none rounded-md px-1 py-0.5"
+            className="hover:text-[var(--accent-text)] transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none rounded-md px-1 py-0.5"
           >
             Cookie Policy
           </Link>
           <span className="text-slate-300 dark:text-slate-700" aria-hidden="true">&bull;</span>
           <Link
             to="/contact"
-            className="hover:text-[#F26A21] dark:hover:text-[#F26A21] transition-colors focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none rounded-md px-1 py-0.5"
+            className="hover:text-[var(--accent-text)] transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none rounded-md px-1 py-0.5"
           >
             Contact
           </Link>
@@ -58,7 +58,7 @@ export default function Footer({ className = '' }) {
           <button
             type="button"
             onClick={openCookiePreferences}
-            className="inline-flex items-center gap-1 font-medium text-[#F26A21] hover:text-[#dc5612] transition-colors focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none rounded-md px-1 py-0.5"
+            className="inline-flex items-center gap-1 font-medium text-[var(--accent-text)] hover:text-[var(--accent-hover)] transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none rounded-md px-1 py-0.5"
             aria-label="Open cookie preferences modal"
           >
             <Cookie className="w-3.5 h-3.5" />

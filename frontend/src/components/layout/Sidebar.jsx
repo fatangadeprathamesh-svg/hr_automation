@@ -29,7 +29,7 @@ export default function Sidebar() {
       >
         <div className="flex flex-col items-center gap-8 w-full">
           {/* Logo Brand Icon */}
-          <div className="w-12 h-12 rounded-2xl bg-[#F26A21] flex items-center justify-center text-white shadow-md shadow-orange-500/25">
+          <div className="w-12 h-12 rounded-2xl bg-[var(--accent)] flex items-center justify-center text-[var(--accent-ink)] shadow-md shadow-[var(--accent-glow)]">
             <FileSearch className="w-6 h-6" />
           </div>
 
@@ -42,9 +42,9 @@ export default function Sidebar() {
                   key={item.to}
                   to={item.to}
                   className={({ isActive }) =>
-                    `group relative flex flex-col items-center justify-center w-14 h-14 rounded-2xl transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none ${
+                    `group relative flex flex-col items-center justify-center w-14 h-14 rounded-2xl transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none ${
                       isActive
-                        ? 'bg-[#F26A21] text-white shadow-md shadow-orange-500/20'
+                        ? 'bg-[var(--accent)] text-[var(--accent-ink)] font-bold shadow-md shadow-[var(--accent-glow)]'
                         : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-800/60'
                     }`
                   }
@@ -85,7 +85,7 @@ export default function Sidebar() {
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center py-1 px-2 rounded-xl text-xs font-medium transition-colors ${
                   isActive
-                    ? 'text-[#F26A21]'
+                    ? 'text-[var(--accent-text)] font-semibold'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`
               }

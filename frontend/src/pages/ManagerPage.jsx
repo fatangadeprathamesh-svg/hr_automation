@@ -140,10 +140,10 @@ export default function ManagerPage() {
         <div>
           <div className="flex items-center justify-between mb-1">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-[#F26A21]" />
+              <TrendingUp className="w-4 h-4 text-[var(--accent-text)]" />
               <span>Weekly Approvals Velocity</span>
             </h3>
-            <span className="text-[11px] font-mono text-[#F26A21] font-semibold bg-orange-50 dark:bg-orange-950/40 border border-orange-200/60 dark:border-orange-800/60 px-2 py-0.5 rounded-md">
+            <span className="text-[11px] font-mono text-[var(--accent-text)] font-semibold bg-[var(--accent-bg-subtle)] border border-[var(--accent-border-subtle)] px-2 py-0.5 rounded-md">
               Total Signed: 24
             </span>
           </div>
@@ -173,7 +173,7 @@ export default function ManagerPage() {
               <Bar
                 dataKey="count"
                 name="Signed Corrections"
-                fill="#F26A21"
+                fill="var(--accent)"
                 radius={[6, 6, 0, 0]}
               />
             </BarChart>
@@ -198,7 +198,7 @@ export default function ManagerPage() {
           </div>
           <button
             onClick={loadData}
-            className="text-xs font-semibold text-[#F26A21] hover:underline"
+            className="text-xs font-semibold text-[var(--accent-text)] hover:underline"
           >
             Refresh Queue
           </button>
@@ -255,7 +255,7 @@ export default function ManagerPage() {
                             setDecision('approved');
                             setManagerReason('Approved based on client onsite confirmation.');
                           }}
-                          className="px-3 py-1.5 rounded-xl bg-[#F26A21] hover:bg-[#dc5612] text-white text-xs font-bold shadow-sm shadow-orange-500/20"
+                          className="px-3 py-1.5 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] border border-[var(--accent-border)] text-xs font-bold shadow-sm shadow-[var(--accent-glow)]"
                         >
                           Review & Sign
                         </button>
@@ -349,7 +349,7 @@ export default function ManagerPage() {
                   value={managerReason}
                   onChange={(e) => setManagerReason(e.target.value)}
                   placeholder="State the justification for approving or rejecting this correction..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-xs text-slate-800 dark:text-white focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-xs text-slate-800 dark:text-white focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
                 />
               </div>
 
@@ -364,7 +364,7 @@ export default function ManagerPage() {
                 <button
                   type="submit"
                   disabled={isDeciding}
-                  className="px-5 py-2.5 rounded-xl bg-[#F26A21] hover:bg-[#dc5612] text-white text-xs font-bold shadow-md shadow-orange-500/20 disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] border border-[var(--accent-border)] text-xs font-bold shadow-md shadow-[var(--accent-glow)] disabled:opacity-50"
                 >
                   {isDeciding ? 'Recording Signature...' : 'Submit Decision'}
                 </button>

@@ -63,7 +63,7 @@ export default function CookieConsentBanner() {
         >
           <div className="glass-panel p-5 sm:p-6 rounded-3xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/90 dark:border-slate-700/90 shadow-2xl ring-1 ring-black/5 dark:ring-white/10">
             <div className="flex items-start gap-3.5">
-              <div className="w-9 h-9 rounded-2xl bg-orange-100 dark:bg-orange-950/60 text-[#F26A21] flex items-center justify-center shrink-0 border border-orange-200/50 dark:border-orange-800/50">
+              <div className="w-9 h-9 rounded-2xl bg-[var(--accent-bg-subtle)] text-[var(--accent-text)] flex items-center justify-center shrink-0 border border-[var(--accent-border-subtle)]">
                 <Cookie className="w-5 h-5" />
               </div>
               <div className="flex-1">
@@ -84,7 +84,7 @@ export default function CookieConsentBanner() {
                   <button
                     type="button"
                     onClick={handleAcceptAll}
-                    className="w-full py-2 px-3 rounded-xl text-xs font-semibold text-slate-800 dark:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none text-center shadow-sm"
+                    className="w-full py-2 px-3 rounded-xl text-xs font-semibold text-slate-800 dark:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none text-center shadow-sm"
                   >
                     Accept all
                   </button>
@@ -92,7 +92,7 @@ export default function CookieConsentBanner() {
                   <button
                     type="button"
                     onClick={handleRejectNonEssential}
-                    className="w-full py-2 px-3 rounded-xl text-xs font-semibold text-slate-800 dark:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none text-center shadow-sm"
+                    className="w-full py-2 px-3 rounded-xl text-xs font-semibold text-slate-800 dark:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none text-center shadow-sm"
                   >
                     Reject non-essential
                   </button>
@@ -100,7 +100,7 @@ export default function CookieConsentBanner() {
                   <button
                     type="button"
                     onClick={handleCustomize}
-                    className="w-full py-2 px-3 rounded-xl text-xs font-semibold text-[#F26A21] bg-orange-50 hover:bg-orange-100 dark:bg-orange-950/40 dark:hover:bg-orange-900/50 border border-orange-200 dark:border-orange-800/60 transition-colors focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none text-center flex items-center justify-center gap-1.5 shadow-sm"
+                    className="w-full py-2 px-3 rounded-xl text-xs font-semibold text-[var(--accent-text)] bg-[var(--accent-bg-subtle)] hover:bg-[var(--accent-glow)] border border-[var(--accent-border-subtle)] transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none text-center flex items-center justify-center gap-1.5 shadow-sm"
                   >
                     <Settings className="w-3.5 h-3.5" />
                     Customize

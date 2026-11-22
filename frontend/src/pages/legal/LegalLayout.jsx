@@ -24,14 +24,14 @@ export default function LegalLayout({ title, subtitle, children }) {
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none"
+              className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
               title="Go back"
               aria-label="Go back to previous page"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
             <Link to="/employee" className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[#F26A21] flex items-center justify-center text-white shadow-sm shadow-orange-500/30">
+              <div className="w-8 h-8 rounded-xl bg-[var(--accent)] text-[var(--accent-ink)] flex items-center justify-center shadow-sm">
                 <FileSearch className="w-4 h-4" />
               </div>
               <span className="font-bold text-sm text-slate-900 dark:text-white hidden sm:inline">
@@ -44,7 +44,7 @@ export default function LegalLayout({ title, subtitle, children }) {
             <button
               type="button"
               onClick={toggleTheme}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-800 transition-colors focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none"
+              className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-800 transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
               title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
               aria-label="Toggle theme"
             >
@@ -52,7 +52,7 @@ export default function LegalLayout({ title, subtitle, children }) {
             </button>
             <Link
               to="/login"
-              className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-[#F26A21] hover:bg-[#dc5612] text-white shadow-sm shadow-orange-500/20 transition-all focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none"
+              className="btn-accent px-3.5 py-1.5 rounded-xl text-xs font-semibold shadow-sm transition-all focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
             >
               Sign In
             </Link>
@@ -76,7 +76,7 @@ export default function LegalLayout({ title, subtitle, children }) {
         {/* Page Header */}
         <div className="glass-panel p-6 sm:p-8 rounded-3xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/80 shadow-sm mb-6">
           <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 dark:bg-orange-950/60 text-[#F26A21] border border-orange-200/60 dark:border-orange-800/60">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[var(--accent-bg-subtle)] text-[var(--accent-text)] border border-[var(--accent-border-subtle)]">
               <ShieldCheck className="w-3.5 h-3.5" />
               Policy Version {SITE_CONFIG.policyVersion}
             </span>

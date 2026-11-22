@@ -70,7 +70,7 @@ export default function CookiePreferencesModal({ isOpen, onClose }) {
         {/* Header */}
         <div className="flex items-start justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-orange-100 dark:bg-orange-950/60 text-[#F26A21] flex items-center justify-center border border-orange-200/50 dark:border-orange-800/50">
+            <div className="w-10 h-10 rounded-2xl bg-[var(--accent-bg-subtle)] text-[var(--accent-text)] flex items-center justify-center border border-[var(--accent-border-subtle)]">
               <Sliders className="w-5 h-5" />
             </div>
             <div>
@@ -89,7 +89,7 @@ export default function CookiePreferencesModal({ isOpen, onClose }) {
             ref={closeBtnRef}
             onClick={onClose}
             aria-label="Close preferences modal"
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
           >
             <X className="w-5 h-5" />
           </button>
@@ -139,8 +139,8 @@ export default function CookiePreferencesModal({ isOpen, onClose }) {
                 role="switch"
                 aria-checked={preferences}
                 onClick={() => setPreferences(!preferences)}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26A21] ${
-                  preferences ? 'bg-[#F26A21]' : 'bg-slate-300 dark:bg-slate-700'
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
+                  preferences ? 'bg-[var(--accent)]' : 'bg-slate-300 dark:bg-slate-700'
                 }`}
               >
                 <span className="sr-only">Toggle preferences cookies</span>
@@ -169,8 +169,8 @@ export default function CookiePreferencesModal({ isOpen, onClose }) {
                 role="switch"
                 aria-checked={analytics}
                 onClick={() => setAnalytics(!analytics)}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26A21] ${
-                  analytics ? 'bg-[#F26A21]' : 'bg-slate-300 dark:bg-slate-700'
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
+                  analytics ? 'bg-[var(--accent)]' : 'bg-slate-300 dark:bg-slate-700'
                 }`}
               >
                 <span className="sr-only">Toggle analytics cookies</span>
@@ -190,14 +190,14 @@ export default function CookiePreferencesModal({ isOpen, onClose }) {
             <button
               type="button"
               onClick={handleRejectNonEssential}
-              className="flex-1 sm:flex-initial px-4 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none"
+              className="flex-1 sm:flex-initial px-4 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
             >
               Reject non-essential
             </button>
             <button
               type="button"
               onClick={handleAcceptAll}
-              className="flex-1 sm:flex-initial px-4 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none"
+              className="flex-1 sm:flex-initial px-4 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
             >
               Accept all
             </button>
@@ -206,7 +206,7 @@ export default function CookiePreferencesModal({ isOpen, onClose }) {
           <button
             type="button"
             onClick={handleSave}
-            className="w-full sm:w-auto px-5 py-2 text-xs font-bold rounded-xl bg-[#F26A21] hover:bg-[#dc5612] text-white shadow-md shadow-orange-500/25 transition-all focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none flex items-center justify-center gap-1.5"
+            className="w-full sm:w-auto px-5 py-2 text-xs font-bold rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] border border-[var(--accent-border)] shadow-md shadow-[var(--accent-glow)] transition-all focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none flex items-center justify-center gap-1.5"
           >
             <Check className="w-3.5 h-3.5" />
             Save preferences

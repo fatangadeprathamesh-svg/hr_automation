@@ -146,8 +146,8 @@ export default function HRPage() {
   }
 
   const donutData = metrics?.submission_donut || [
-    { name: 'Submitted', value: 24, fill: '#10B981' },
-    { name: 'Pending', value: 6, fill: '#F26A21' },
+    { name: 'Submitted', value: 24, fill: 'var(--status-success)' },
+    { name: 'Pending', value: 6, fill: 'var(--accent)' },
   ];
 
   const issuesByRule = metrics?.issues_by_rule || [];
@@ -182,14 +182,14 @@ export default function HRPage() {
 
         {/* Month Selector */}
         <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-[#F26A21]" />
+          <Calendar className="w-4 h-4 text-[var(--accent-text)]" />
           <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
             Audit Month:
           </span>
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-xs font-bold text-slate-800 dark:text-white focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none"
+            className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-xs font-bold text-slate-800 dark:text-white focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
             aria-label="Select audit cycle month"
           >
             <option value="2026-10">October 2026 (Active Close)</option>
@@ -200,10 +200,10 @@ export default function HRPage() {
       </div>
 
       {/* Phase 9: AI Executive Month-End Briefing */}
-      <GlassCard className="border-l-4 border-l-[#F26A21]">
+      <GlassCard className="border-l-4 border-l-[var(--accent)]">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-orange-100 dark:bg-orange-950/40 text-[#F26A21]">
+            <div className="p-2 rounded-xl bg-[var(--accent-bg-subtle)] text-[var(--accent-text)] border border-[var(--accent-border-subtle)]">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
@@ -224,7 +224,7 @@ export default function HRPage() {
             type="button"
             onClick={handleRefreshAiSummary}
             disabled={isAiSummaryLoading}
-            className="px-3 py-1.5 rounded-xl border border-orange-200 dark:border-orange-900/60 bg-orange-50/50 dark:bg-orange-950/20 text-[#F26A21] hover:bg-orange-100/50 text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-50"
+            className="px-3 py-1.5 rounded-xl border border-[var(--accent-border-subtle)] bg-[var(--accent-bg-subtle)] text-[var(--accent-text)] hover:bg-[var(--accent-glow)] text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-50"
           >
             <Sparkles className="w-3.5 h-3.5" />
             {isAiSummaryLoading ? 'Generating...' : 'Refresh AI Briefing'}
@@ -233,7 +233,7 @@ export default function HRPage() {
 
         {isAiSummaryLoading ? (
           <div className="py-6 flex flex-col items-center justify-center gap-2 text-slate-400">
-            <Sparkles className="w-6 h-6 text-[#F26A21] animate-spin" />
+            <Sparkles className="w-6 h-6 text-[var(--accent-text)] animate-spin" />
             <p className="text-xs">Generating statistical month-end analysis with AI...</p>
           </div>
         ) : (
@@ -340,7 +340,7 @@ export default function HRPage() {
                   dataKey="value"
                 >
                   {donutData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill || '#F26A21'} />
+                    <Cell key={`cell-${index}`} fill={entry.fill || 'var(--accent)'} />
                   ))}
                 </Pie>
                 <Tooltip content={<GlassTooltip unit=" employees" />} />
@@ -373,7 +373,7 @@ export default function HRPage() {
           <div>
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Layers className="w-4 h-4 text-[#F26A21]" />
+                <Layers className="w-4 h-4 text-[var(--accent-text)]" />
                 <span>Issues by Policy Rule (Blockers vs Warnings)</span>
               </h3>
               <div className="flex items-center gap-2 text-[11px]">
@@ -407,8 +407,8 @@ export default function HRPage() {
                   label={{ value: 'Flags Count', angle: -90, position: 'insideLeft', offset: 25, fontSize: 11, fill: '#64748b' }}
                 />
                 <Tooltip content={<GlassTooltip />} />
-                <Bar dataKey="blockers" name="Hard Blockers" fill="#EF4444" stackId="a" />
-                <Bar dataKey="warnings" name="Warnings" fill="#F59E0B" stackId="a" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="blockers" name="Hard Blockers" fill="var(--status-error)" stackId="a" />
+                <Bar dataKey="warnings" name="Warnings" fill="var(--status-warning)" stackId="a" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -423,7 +423,7 @@ export default function HRPage() {
       <GlassCard>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Flame className="w-4 h-4 text-[#F26A21]" />
+            <Flame className="w-4 h-4 text-[var(--accent-text)]" />
             <span>Top 5 Recurring Policy Exceptions ({selectedMonth})</span>
           </h3>
           <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
@@ -439,7 +439,7 @@ export default function HRPage() {
             >
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="w-5 h-5 rounded-full bg-orange-100 dark:bg-orange-950/60 text-[#F26A21] flex items-center justify-center font-bold text-[10px]">
+                  <span className="w-5 h-5 rounded-full bg-[var(--accent-bg-subtle)] text-[var(--accent-text)] border border-[var(--accent-border-subtle)] flex items-center justify-center font-bold text-[10px]">
                     #{issue.rank}
                   </span>
                   <span
@@ -477,7 +477,7 @@ export default function HRPage() {
           </div>
           <button
             onClick={() => loadData(selectedMonth)}
-            className="text-xs font-semibold text-[#F26A21] hover:underline"
+            className="text-xs font-semibold text-[var(--accent-text)] hover:underline"
           >
             Refresh Submissions
           </button>
@@ -534,7 +534,7 @@ export default function HRPage() {
                                 setHrDecision('approved');
                                 setHrReason('Approved for final payroll export.');
                               }}
-                              className="px-3 py-1.5 rounded-xl bg-[#F26A21] hover:bg-[#dc5612] text-white text-xs font-bold shadow-sm shadow-orange-500/20"
+                              className="px-3 py-1.5 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] border border-[var(--accent-border)] text-xs font-bold shadow-sm shadow-[var(--accent-glow)]"
                             >
                               HR Review
                             </button>
@@ -543,7 +543,7 @@ export default function HRPage() {
                             type="button"
                             disabled={exportingId === sub.snapshot_id}
                             onClick={() => handleExport(sub.snapshot_id)}
-                            className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-[#F26A21] hover:text-[#F26A21] text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                            className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-[var(--accent)] hover:text-[var(--accent-text)] text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
                           >
                             <Download className="w-3.5 h-3.5" />
                             <span>{exportingId === sub.snapshot_id ? 'Exporting...' : 'Dual Export'}</span>
@@ -646,7 +646,7 @@ export default function HRPage() {
                   value={hrReason}
                   onChange={(e) => setHrReason(e.target.value)}
                   placeholder="State the audit justification or specific required correction..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-xs text-slate-800 dark:text-white focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-xs text-slate-800 dark:text-white focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
                 />
               </div>
 
@@ -661,7 +661,7 @@ export default function HRPage() {
                 <button
                   type="submit"
                   disabled={isDeciding}
-                  className="px-5 py-2.5 rounded-xl bg-[#F26A21] hover:bg-[#dc5612] text-white text-xs font-bold shadow-md shadow-orange-500/20 disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] border border-[var(--accent-border)] text-xs font-bold shadow-md shadow-[var(--accent-glow)] disabled:opacity-50"
                 >
                   {isDeciding ? 'Saving Decision...' : 'Confirm Decision'}
                 </button>

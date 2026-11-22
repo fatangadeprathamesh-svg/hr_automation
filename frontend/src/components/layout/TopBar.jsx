@@ -42,7 +42,7 @@ export default function TopBar({ title = 'HR Self-Audit Assistant', onPersonaCha
         <h1 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight">
           {title}
         </h1>
-        <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-orange-100 dark:bg-orange-950/60 text-[#F26A21] border border-orange-200/60 dark:border-orange-800/60">
+        <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--accent-bg-subtle)] text-[var(--accent-text)] border border-[var(--accent-border-subtle)]">
           <ShieldAlert className="w-3 h-3" />
           DEV mode active
         </span>
@@ -54,22 +54,22 @@ export default function TopBar({ title = 'HR Self-Audit Assistant', onPersonaCha
         <div className="relative">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl border transition-all text-xs font-medium focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none ${
+            className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl border transition-all text-xs font-medium focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none ${
               menuOpen
-                ? 'border-[#F26A21] bg-white dark:bg-slate-800 shadow-md ring-2 ring-orange-500/20'
+                ? 'border-[var(--accent)] bg-white dark:bg-slate-800 shadow-md ring-2 ring-[var(--accent)]/20'
                 : 'border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm'
             }`}
             aria-expanded={menuOpen}
             aria-label="Switch active test persona"
           >
-            <div className="w-6 h-6 rounded-full bg-[#F26A21] text-white flex items-center justify-center font-bold text-[10px] shrink-0 shadow-sm shadow-orange-500/30">
+            <div className="w-6 h-6 rounded-full bg-[var(--accent)] text-[var(--accent-ink)] flex items-center justify-center font-bold text-[10px] shrink-0 shadow-sm shadow-[var(--accent-glow)]">
               {persona.id.substring(0, 3)}
             </div>
             <div className="text-left hidden sm:block">
               <span className="block font-semibold leading-tight text-slate-900 dark:text-white">{persona.name}</span>
               <span className="block text-[10px] text-slate-500 dark:text-slate-400 capitalize">{persona.role.replace('_', ' ')}</span>
             </div>
-            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${menuOpen ? 'rotate-180 text-[#F26A21]' : ''}`} />
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${menuOpen ? 'rotate-180 text-[var(--accent-text)]' : ''}`} />
           </button>
 
           {menuOpen && (
@@ -96,14 +96,14 @@ export default function TopBar({ title = 'HR Self-Audit Assistant', onPersonaCha
                         onClick={() => handleSelectPersona(p)}
                         className={`w-full text-left px-3.5 py-2.5 text-xs flex items-center justify-between transition-colors ${
                           isSelected
-                            ? 'bg-orange-50/90 dark:bg-slate-800/90 text-[#F26A21] font-semibold'
+                            ? 'bg-[var(--accent-bg-subtle)] text-[var(--accent-text)] font-semibold'
                             : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
                         }`}
                       >
                         <div className="flex items-center gap-2.5">
                           <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 ${
                             isSelected
-                              ? 'bg-[#F26A21] text-white shadow-sm'
+                              ? 'bg-[var(--accent)] text-[var(--accent-ink)] shadow-sm'
                               : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
                           }`}>
                             {p.id.substring(0, 3)}
@@ -117,7 +117,7 @@ export default function TopBar({ title = 'HR Self-Audit Assistant', onPersonaCha
                             </span>
                           </div>
                         </div>
-                        {isSelected && <Check className="w-4 h-4 text-[#F26A21] shrink-0" />}
+                        {isSelected && <Check className="w-4 h-4 text-[var(--accent-text)] shrink-0" />}
                       </button>
                     );
                   })}
@@ -130,7 +130,7 @@ export default function TopBar({ title = 'HR Self-Audit Assistant', onPersonaCha
         {/* Theme Sun/Moon Toggle */}
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800 transition-colors border border-slate-200 dark:border-slate-700 focus-visible:ring-2 focus-visible:ring-[#F26A21] focus-visible:outline-none shadow-sm"
+          className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800 transition-colors border border-slate-200 dark:border-slate-700 focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none shadow-sm"
           title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
           aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
         >

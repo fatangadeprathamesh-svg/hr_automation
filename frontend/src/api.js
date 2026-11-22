@@ -62,12 +62,12 @@ function canPersistPreferences() {
   }
 }
 
-// Initialize theme from storage (prefers persistent if allowed, else session)
+// Initialize theme from storage (prefers persistent if allowed, else session; dark is default)
 export function getSavedTheme() {
   try {
-    return localStorage.getItem("hr_theme") || sessionStorage.getItem("hr_theme") || "light";
+    return localStorage.getItem("hr_theme") || sessionStorage.getItem("hr_theme") || "dark";
   } catch (_) {
-    return "light";
+    return "dark";
   }
 }
 
@@ -878,7 +878,7 @@ export async function fetchHRMetrics(period = "2026-10") {
         average_resolve_days: 1.3,
         submission_donut: [
           { name: "Submitted", value: 28, fill: "#10B981" },
-          { name: "Pending", value: 2, fill: "#F26A21" },
+          { name: "Pending", value: 2, fill: "#D4A84B" },
         ],
         issues_by_rule: [
           { rule: "Missing Punch", count: 6, blockers: 2, warnings: 4 },
@@ -907,7 +907,7 @@ export async function fetchHRMetrics(period = "2026-10") {
         average_resolve_days: 2.1,
         submission_donut: [
           { name: "Submitted", value: 26, fill: "#10B981" },
-          { name: "Pending", value: 4, fill: "#F26A21" },
+          { name: "Pending", value: 4, fill: "#D4A84B" },
         ],
         issues_by_rule: [
           { rule: "Missing Punch", count: 11, blockers: 7, warnings: 4 },
@@ -936,7 +936,7 @@ export async function fetchHRMetrics(period = "2026-10") {
       average_resolve_days: 1.8,
       submission_donut: [
         { name: "Submitted", value: 24, fill: "#10B981" },
-        { name: "Pending", value: 6, fill: "#F26A21" },
+        { name: "Pending", value: 6, fill: "#D4A84B" },
       ],
       issues_by_rule: [
         { rule: "Missing Punch", count: 14, blockers: 9, warnings: 5 },
@@ -975,7 +975,7 @@ export async function fetchHRMetrics(period = "2026-10") {
         base.pending_count = Math.max(0, 30 - submitted);
         base.submission_donut = [
           { name: "Submitted", value: base.submitted_count, fill: "#10B981" },
-          { name: "Pending", value: base.pending_count, fill: "#F26A21" },
+          { name: "Pending", value: base.pending_count, fill: "#D4A84B" },
         ];
       }
       return base;
