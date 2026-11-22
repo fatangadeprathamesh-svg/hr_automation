@@ -1,15 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { Sun, Moon, ShieldAlert, ChevronDown, Check } from 'lucide-react';
-import { getCurrentPersona, setPersona, PERSONAS, getSavedTheme, saveTheme } from '../../api';
+import { getCurrentPersona, setPersona, PERSONAS, getSavedTheme, saveTheme, checkBackendHealth } from '../../api';
 
 export default function TopBar({ title = 'HR Self-Audit Assistant', onPersonaChange = null }) {
   const [theme, setTheme] = useState(getSavedTheme());
   const [persona, setCurrent] = useState(getCurrentPersona());
   const [menuOpen, setMenuOpen] = useState(false);
+  const [backendStatus, setBackendStatus] = useState({ checked: false, online: false });
 
   useEffect(() => {
     saveTheme(theme);
   }, [theme]);
+
+  // Check backend health on mount and periodically
+  useEffect(() => {
+    let active = true;
+    async function checkHealth() {
+      const res = await checkBackendHealth();
+      if (active) {
+        setBackendStatus({ checked: true, online: res.online, ...res });
+      }
+    }
+    checkHealth();
+    const interval = setInterval(checkHealth, 10000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Close dropdown on Escape key
   useEffect(() => {
@@ -38,13 +56,34 @@ export default function TopBar({ title = 'HR Self-Audit Assistant', onPersonaCha
   return (
     <header className="relative z-30 glass-panel rounded-2xl px-6 py-3.5 mb-6 flex items-center justify-between shadow-sm">
       {/* Title & DEV Mode Banner */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
         <h1 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight">
           {title}
         </h1>
         <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--accent-bg-subtle)] text-[var(--accent-text)] border border-[var(--accent-border-subtle)]">
           <ShieldAlert className="w-3 h-3" />
           DEV mode active
+        </span>
+
+        {/* Backend Online/Offline Status Indicator */}
+        <span
+          title={
+            backendStatus.online
+              ? `Backend is Online at 127.0.0.1:8000 (Database: ${backendStatus.db || 'connected'})`
+              : 'Backend is Offline (Cannot reach http://127.0.0.1:8000/api/health)'
+          }
+          className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border transition-all ${
+            backendStatus.online
+              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+              : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+          }`}
+        >
+          <span
+            className={`w-2 h-2 rounded-full ${
+              backendStatus.online ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
+            }`}
+          />
+          <span>{backendStatus.online ? 'Backend Online' : 'Backend Offline'}</span>
         </span>
       </div>
 

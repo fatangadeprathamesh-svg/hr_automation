@@ -9,7 +9,34 @@ export default defineConfig({
       '/api': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+      '/health': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/employees': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/corrections': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/submissions': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/exports': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/audit-events': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/auth': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
       },
     },
   },

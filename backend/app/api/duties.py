@@ -90,6 +90,7 @@ class AIDraftRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 @router.get("", status_code=status.HTTP_200_OK)
+@router.get("/hub", status_code=status.HTTP_200_OK)
 def list_duties_hub(
     actor: ActorIdentity = Depends(get_current_actor),
     db: Session = Depends(get_db),

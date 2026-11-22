@@ -47,6 +47,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 app.include_router(imports_router)
@@ -64,10 +65,18 @@ app.include_router(duties_router)
 app.include_router(consent_router)
 
 
+@app.get("/api/health")
 @app.get("/health")
-def health_check():
+def health_check(db: Session = Depends(get_db)):
+    db_status = "connected"
+    try:
+        from sqlalchemy import text
+        db.execute(text("SELECT 1"))
+    except Exception as e:
+        db_status = f"error: {str(e)}"
     return {
-        "status": "healthy",
+        "status": "ok",
+        "db": db_status,
         "service": "hr-self-audit-backend",
         "environment": settings.ENVIRONMENT,
         "organization_id": settings.ORGANIZATION_ID,

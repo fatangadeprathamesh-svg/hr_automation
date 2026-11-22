@@ -403,9 +403,14 @@ class MasterImportService:
                     if essential not in header_map:
                         missing_essential.append(essential)
 
+                unknown_cols = [c for c in header_map.keys() if c not in COLUMNS]
+
                 if missing_essential:
                     upload.status = "failed"
-                    upload.error_message = f"Missing required header columns: {', '.join(missing_essential)}"
+                    err_msg = f"Missing required column(s): {', '.join(missing_essential)}."
+                    if unknown_cols:
+                        err_msg += f" Unknown column(s) ignored: {', '.join(unknown_cols[:10])}."
+                    upload.error_message = err_msg
                     db.commit()
                     return
 

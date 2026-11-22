@@ -17,6 +17,7 @@ import SkeletonLoader from '../components/common/SkeletonLoader';
 import ErrorBanner from '../components/common/ErrorBanner';
 import {
   ArrowLeft,
+  Briefcase,
   Bot,
   UserCheck,
   CheckCircle2,

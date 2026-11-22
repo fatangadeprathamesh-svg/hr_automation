@@ -36,6 +36,32 @@ export default function LoginPage() {
     document.head.appendChild(script);
   }
 
+  async function handleGoogleCredentialResponse(response) {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await googleSignIn({ credential: response.credential });
+      if (res.requiresOtp) {
+        navigate('/verify-otp', {
+          state: {
+            email: res.email,
+            devCode: res.devCode,
+            requiresOtp: true,
+          },
+        });
+      } else {
+        const role = res.role || res.persona?.role || 'employee';
+        if (role === 'hr_admin' || role === 'hr') navigate('/hr');
+        else if (role === 'manager') navigate('/manager');
+        else navigate('/employee');
+      }
+    } catch (err) {
+      setError(err.message || 'Google sign-in failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function handleCustomGoogleClick() {
     setLoading(true);
     setError(null);

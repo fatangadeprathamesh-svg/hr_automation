@@ -45,11 +45,34 @@ const RECORD_TYPES = [
   { id: 'applicant', label: 'Applicant' },
 ];
 
+const CANONICAL_COLUMNS = [
+  "record_id", "record_type", "source_file", "employee_id", "applicant_id",
+  "employee_name", "first_name", "last_name", "department", "position",
+  "division", "business_unit", "branch_location", "manager", "employment_type",
+  "gender", "age", "dob", "marital_status", "state", "education",
+  "hire_date", "exit_date", "employee_status", "performance_score",
+  "performance_rating", "monthly_income", "years_experience", "salary_hike_pct",
+  "event_date", "start_date", "end_date", "applied_date", "status",
+  "category", "reason", "days", "clock_in", "clock_out", "hours_total",
+  "hours_scheduled", "break_minutes", "leave_entitlement", "leave_taken_so_far",
+  "leave_remaining", "engagement_score", "satisfaction_score",
+  "work_life_balance_score", "training_program", "training_outcome",
+  "trainer", "training_location", "training_cost", "desired_salary", "country"
+];
+
+function formatFileSize(bytes) {
+  if (!bytes && bytes !== 0) return '0 B';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
 export default function DataImportPage() {
   const [activeTab, setActiveTab] = useState('upload'); // 'upload' | 'records' | 'history'
 
   // Upload state
   const [selectedFile, setSelectedFile] = useState(null);
+  const [fileInspection, setFileInspection] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [currentUpload, setCurrentUpload] = useState(null);
@@ -235,6 +258,7 @@ export default function DataImportPage() {
     setUploadError(null);
     setUploadSuccess(null);
     setRejectedRowsData([]);
+    setFileInspection(null);
 
     // Check extension
     if (!file.name.toLowerCase().endsWith('.csv')) {
@@ -247,13 +271,50 @@ export default function DataImportPage() {
     const maxBytes = 200 * 1024 * 1024;
     if (file.size > maxBytes) {
       setUploadError(
-        `File is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). The maximum allowed upload size is 200 MB.`
+        `File is too large (${formatFileSize(file.size)}). The maximum allowed upload size is 200 MB.`
       );
       setSelectedFile(null);
       return;
     }
 
     setSelectedFile(file);
+
+    // Inspect header client-side to report missing required or unknown columns immediately
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result || '';
+        const firstLine = text.split(/[\r\n]+/)[0] || '';
+        const delimiter = (firstLine.includes('\t') && firstLine.split('\t').length > firstLine.split(',').length) ? '\t' : ',';
+        const rawHeaders = firstLine.split(delimiter).map(h => h.trim().replace(/^["']|["']$/g, ''));
+        const normalizedHeaders = rawHeaders.map(h => h.toLowerCase().replace(/\s+/g, '_'));
+
+        const missingRequired = ['record_id', 'record_type'].filter(req => !normalizedHeaders.includes(req));
+        const unknownCols = rawHeaders.filter((_, idx) => {
+          const norm = normalizedHeaders[idx];
+          return norm && !CANONICAL_COLUMNS.includes(norm);
+        });
+
+        const inspection = {
+          checked: true,
+          totalColumns: rawHeaders.length,
+          missingRequired,
+          unknownColumns: unknownCols,
+        };
+        setFileInspection(inspection);
+
+        if (missingRequired.length > 0) {
+          let warnMsg = `CSV is missing required column(s): ${missingRequired.join(', ')}.`;
+          if (unknownCols.length > 0) {
+            warnMsg += ` Unknown columns ignored: ${unknownCols.join(', ')}.`;
+          }
+          setUploadError(warnMsg);
+        }
+      } catch (_) {
+        setFileInspection(null);
+      }
+    };
+    reader.readAsText(file.slice(0, 8192));
   }
 
   async function handleStartUpload() {
@@ -450,11 +511,38 @@ export default function DataImportPage() {
               </p>
 
               {selectedFile && (
-                <div className="mt-4 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-700 dark:text-slate-300 shadow-sm flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-[var(--accent-text)]" />
-                  <span>{selectedFile.name}</span>
-                  <span className="text-slate-400">|</span>
-                  <span>{(selectedFile.size / (1024 * 1024)).toFixed(2)} MB</span>
+                <div className="mt-4 flex flex-col items-center gap-2">
+                  <div className="px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-700 dark:text-slate-300 shadow-sm flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-[var(--accent-text)]" />
+                    <span>{selectedFile.name}</span>
+                    <span className="text-slate-400">|</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">{formatFileSize(selectedFile.size)}</span>
+                  </div>
+
+                  {fileInspection && (
+                    <div className="text-[11px] max-w-lg space-y-1">
+                      {fileInspection.missingRequired.length > 0 ? (
+                        <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-sans">
+                          <strong>Missing required column(s):</strong> {fileInspection.missingRequired.join(', ')}
+                          {fileInspection.unknownColumns.length > 0 && (
+                            <div className="mt-1 text-[10px] text-rose-600 dark:text-rose-400">
+                              Unknown columns that will be ignored: {fileInspection.unknownColumns.join(', ')}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-sans flex items-center gap-1.5 justify-center">
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                          <span>Valid header: {fileInspection.totalColumns} columns detected (required fields present)</span>
+                          {fileInspection.unknownColumns.length > 0 && (
+                            <span className="text-amber-700 dark:text-amber-400 ml-1">
+                              &bull; {fileInspection.unknownColumns.length} unknown column(s) will be ignored
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
