@@ -1,48 +1,48 @@
 @layer base {
   :root {
     /* ==========================================================================
-       INDIGO & GOLD THEME (DARK THEME IS THE DEFAULT)
+       GRAPHITE & ICE BLUE THEME (DARK THEME IS THE DEFAULT)
        ========================================================================== */
-    --bg: #0B1020;
-    --surface: #121933;
-    --surface-2: #1A2347;
-    --border: rgba(245, 241, 232, 0.10);
-    --text: #F5F1E8;
-    --text-muted: #A7B0C4;
-    --accent: #D4A84B;        /* Gold fill */
-    --accent-ink: #0B1020;    /* Text on gold buttons */
-    --accent-text: #D4A84B;   /* Gold text/icons in dark mode */
-    --accent-hover: #c49638;
-    --accent-border: #D4A84B;
-    --accent-glow: rgba(212, 168, 75, 0.28);
-    --accent-bg-subtle: rgba(212, 168, 75, 0.14);
-    --accent-border-subtle: rgba(212, 168, 75, 0.32);
+    --bg: #0F1218;            /* Charcoal / Graphite */
+    --surface: #171B24;
+    --surface-2: #212735;
+    --border: rgba(240, 244, 250, 0.10);
+    --text: #F0F4FA;          /* Cool white */
+    --text-muted: #8B95A8;
+    --accent: #5B9BF3;        /* Ice Blue */
+    --accent-ink: #0F1218;    /* Dark text on ice blue buttons */
+    --accent-text: #7CB1F7;   /* Slightly lighter ice blue for small text/links */
+    --accent-hover: #4989e2;
+    --accent-border: #5B9BF3;
+    --accent-glow: rgba(91, 155, 243, 0.28);
+    --accent-bg-subtle: rgba(91, 155, 243, 0.14);
+    --accent-border-subtle: rgba(91, 155, 243, 0.32);
 
-    /* Fixed Status Colors (never use gold for status) */
+    /* Fixed Status Colors (distinct from Ice Blue) */
     --status-error: #F87171;
     --status-error-bg: rgba(248, 113, 113, 0.15);
     --status-error-border: rgba(248, 113, 113, 0.35);
 
-    --status-warning: #FB923C;
-    --status-warning-bg: rgba(251, 146, 60, 0.15);
-    --status-warning-border: rgba(251, 146, 60, 0.35);
+    --status-warning: #FBBF24;
+    --status-warning-bg: rgba(251, 191, 36, 0.15);
+    --status-warning-border: rgba(251, 191, 36, 0.35);
 
-    --status-success: #4ADE80;
-    --status-success-bg: rgba(74, 222, 128, 0.15);
-    --status-success-border: rgba(74, 222, 128, 0.35);
+    --status-success: #34D399;
+    --status-success-bg: rgba(52, 211, 153, 0.15);
+    --status-success-border: rgba(52, 211, 153, 0.35);
 
-    --status-info: #60A5FA;
-    --status-info-bg: rgba(96, 165, 250, 0.15);
-    --status-info-border: rgba(96, 165, 250, 0.35);
+    --status-info: #C084FC;   /* Purple for info so it never clashes with ice blue */
+    --status-info-bg: rgba(192, 132, 252, 0.15);
+    --status-info-border: rgba(192, 132, 252, 0.35);
 
     /* Chart series */
-    --chart-primary: #D4A84B;
-    --chart-secondary: #A7B0C4;
-    --chart-tertiary: #1A2347;
+    --chart-primary: #5B9BF3;
+    --chart-secondary: #8B95A8;
+    --chart-tertiary: #212735;
 
     /* Glass Panels */
-    --glass-bg: rgba(18, 25, 51, 0.78);
-    --glass-border: rgba(245, 241, 232, 0.10);
+    --glass-bg: rgba(23, 27, 36, 0.82);
+    --glass-border: rgba(240, 244, 250, 0.10);
     --glass-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.50);
 
     color-scheme: dark;
@@ -63,86 +63,86 @@
    ========================================================================== */
 html:not(.dark),
 html.light {
-  --bg: #F5F1E8;
+  --bg: #F4F6FA;
   --surface: #FFFFFF;
-  --surface-2: #EAE4D5;
-  --border: rgba(11, 16, 32, 0.12);
-  --text: #0B1020;
-  --text-muted: #5B6478;
-  --accent: #D4A84B;
-  --accent-ink: #0B1020;
-  --accent-text: #7A5C14;   /* WCAG 2.1 AA compliant gold on light surfaces */
-  --accent-hover: #b88f39;
-  --accent-border: #9E751D; /* WCAG 2.1 3:1 graphical component boundary */
-  --accent-glow: rgba(212, 168, 75, 0.22);
-  --accent-bg-subtle: rgba(212, 168, 75, 0.14);
-  --accent-border-subtle: rgba(122, 92, 20, 0.25);
+  --surface-2: #E5E9F2;
+  --border: rgba(15, 18, 24, 0.12);
+  --text: #0F1218;
+  --text-muted: #576074;
+  --accent: #2B6CBF;        /* Darker ice blue so it passes 4.5:1 on light bg */
+  --accent-ink: #FFFFFF;    /* White text on this blue */
+  --accent-text: #205499;   /* Darker blue for links/text/icons */
+  --accent-hover: #22589e;
+  --accent-border: #205499;
+  --accent-glow: rgba(43, 108, 191, 0.22);
+  --accent-bg-subtle: rgba(43, 108, 191, 0.12);
+  --accent-border-subtle: rgba(32, 84, 153, 0.25);
 
   --status-error: #B91C1C;
   --status-error-bg: rgba(185, 28, 28, 0.10);
   --status-error-border: rgba(185, 28, 28, 0.25);
 
-  --status-warning: #C2410C;
-  --status-warning-bg: rgba(194, 65, 12, 0.10);
-  --status-warning-border: rgba(194, 65, 12, 0.25);
+  --status-warning: #B45309;
+  --status-warning-bg: rgba(180, 83, 9, 0.10);
+  --status-warning-border: rgba(180, 83, 9, 0.25);
 
-  --status-success: #166534;
-  --status-success-bg: rgba(22, 101, 52, 0.10);
-  --status-success-border: rgba(22, 101, 52, 0.25);
+  --status-success: #047857;
+  --status-success-bg: rgba(4, 120, 87, 0.10);
+  --status-success-border: rgba(4, 120, 87, 0.25);
 
-  --status-info: #1D4ED8;
-  --status-info-bg: rgba(29, 78, 216, 0.10);
-  --status-info-border: rgba(29, 78, 216, 0.25);
+  --status-info: #7E22CE;
+  --status-info-bg: rgba(126, 34, 206, 0.10);
+  --status-info-border: rgba(126, 34, 206, 0.25);
 
-  --chart-primary: #D4A84B;
-  --chart-secondary: #5B6478;
-  --chart-tertiary: #EAE4D5;
+  --chart-primary: #2B6CBF;
+  --chart-secondary: #576074;
+  --chart-tertiary: #E5E9F2;
 
-  --glass-bg: rgba(255, 255, 255, 0.88);
-  --glass-border: rgba(11, 16, 32, 0.12);
-  --glass-shadow: 0 10px 30px 0 rgba(11, 16, 32, 0.06);
+  --glass-bg: rgba(255, 255, 255, 0.90);
+  --glass-border: rgba(15, 18, 24, 0.12);
+  --glass-shadow: 0 10px 30px 0 rgba(15, 18, 24, 0.06);
 
   color-scheme: light;
 }
 
 html.dark {
-  --bg: #0B1020;
-  --surface: #121933;
-  --surface-2: #1A2347;
-  --border: rgba(245, 241, 232, 0.10);
-  --text: #F5F1E8;
-  --text-muted: #A7B0C4;
-  --accent: #D4A84B;
-  --accent-ink: #0B1020;
-  --accent-text: #D4A84B;
-  --accent-hover: #c49638;
-  --accent-border: #D4A84B;
-  --accent-glow: rgba(212, 168, 75, 0.28);
-  --accent-bg-subtle: rgba(212, 168, 75, 0.14);
-  --accent-border-subtle: rgba(212, 168, 75, 0.32);
+  --bg: #0F1218;
+  --surface: #171B24;
+  --surface-2: #212735;
+  --border: rgba(240, 244, 250, 0.10);
+  --text: #F0F4FA;
+  --text-muted: #8B95A8;
+  --accent: #5B9BF3;
+  --accent-ink: #0F1218;
+  --accent-text: #7CB1F7;
+  --accent-hover: #4989e2;
+  --accent-border: #5B9BF3;
+  --accent-glow: rgba(91, 155, 243, 0.28);
+  --accent-bg-subtle: rgba(91, 155, 243, 0.14);
+  --accent-border-subtle: rgba(91, 155, 243, 0.32);
 
   --status-error: #F87171;
   --status-error-bg: rgba(248, 113, 113, 0.15);
   --status-error-border: rgba(248, 113, 113, 0.35);
 
-  --status-warning: #FB923C;
-  --status-warning-bg: rgba(251, 146, 60, 0.15);
-  --status-warning-border: rgba(251, 146, 60, 0.35);
+  --status-warning: #FBBF24;
+  --status-warning-bg: rgba(251, 191, 36, 0.15);
+  --status-warning-border: rgba(251, 191, 36, 0.35);
 
-  --status-success: #4ADE80;
-  --status-success-bg: rgba(74, 222, 128, 0.15);
-  --status-success-border: rgba(74, 222, 128, 0.35);
+  --status-success: #34D399;
+  --status-success-bg: rgba(52, 211, 153, 0.15);
+  --status-success-border: rgba(52, 211, 153, 0.35);
 
-  --status-info: #60A5FA;
-  --status-info-bg: rgba(96, 165, 250, 0.15);
-  --status-info-border: rgba(96, 165, 250, 0.35);
+  --status-info: #C084FC;
+  --status-info-bg: rgba(192, 132, 252, 0.15);
+  --status-info-border: rgba(192, 132, 252, 0.35);
 
-  --chart-primary: #D4A84B;
-  --chart-secondary: #A7B0C4;
-  --chart-tertiary: #1A2347;
+  --chart-primary: #5B9BF3;
+  --chart-secondary: #8B95A8;
+  --chart-tertiary: #212735;
 
-  --glass-bg: rgba(18, 25, 51, 0.78);
-  --glass-border: rgba(245, 241, 232, 0.10);
+  --glass-bg: rgba(23, 27, 36, 0.82);
+  --glass-border: rgba(240, 244, 250, 0.10);
   --glass-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.50);
 
   color-scheme: dark;
@@ -150,23 +150,23 @@ html.dark {
 
 /* ==========================================================================
    AMBIENT BACKGROUND GRADIENT
-   Deep indigo with subtle gold ambient glows in dark mode;
-   Warm ivory with gentle champagne hues in light mode.
+   Deep charcoal/graphite with subtle ice blue ambient glows in dark mode;
+   Crisp cool light grey with gentle blue reflections in light mode.
    ========================================================================== */
 .app-gradient-bg {
-  background: radial-gradient(circle at 12% 16%, rgba(212, 168, 75, 0.08) 0%, transparent 35%),
-              radial-gradient(circle at 88% 12%, rgba(26, 35, 71, 0.65) 0%, transparent 45%),
-              radial-gradient(circle at 50% 90%, rgba(18, 25, 51, 0.85) 0%, transparent 55%),
-              linear-gradient(135deg, #0B1020 0%, #0e1428 50%, #080c18 100%);
+  background: radial-gradient(circle at 12% 16%, rgba(91, 155, 243, 0.08) 0%, transparent 35%),
+              radial-gradient(circle at 88% 12%, rgba(33, 39, 53, 0.65) 0%, transparent 45%),
+              radial-gradient(circle at 50% 90%, rgba(23, 27, 36, 0.85) 0%, transparent 55%),
+              linear-gradient(135deg, #0F1218 0%, #131722 50%, #0a0d12 100%);
   min-height: 100vh;
 }
 
 html:not(.dark) .app-gradient-bg,
 html.light .app-gradient-bg {
-  background: radial-gradient(circle at 12% 16%, rgba(212, 168, 75, 0.10) 0%, transparent 40%),
-              radial-gradient(circle at 88% 12%, rgba(226, 220, 208, 0.6) 0%, transparent 45%),
-              radial-gradient(circle at 50% 90%, rgba(235, 230, 218, 0.6) 0%, transparent 50%),
-              linear-gradient(135deg, #F5F1E8 0%, #EDE7D9 50%, #F5F1E8 100%);
+  background: radial-gradient(circle at 12% 16%, rgba(43, 108, 191, 0.08) 0%, transparent 40%),
+              radial-gradient(circle at 88% 12%, rgba(220, 226, 238, 0.6) 0%, transparent 45%),
+              radial-gradient(circle at 50% 90%, rgba(235, 240, 248, 0.6) 0%, transparent 50%),
+              linear-gradient(135deg, #F4F6FA 0%, #E9EDF5 50%, #F4F6FA 100%);
   min-height: 100vh;
 }
 
