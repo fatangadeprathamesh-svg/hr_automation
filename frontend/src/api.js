@@ -35,6 +35,14 @@ export const PERSONAS = {
     department: "Human Resources",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
   },
+  IC001: {
+    id: "IC001",
+    name: "Irene IC Member",
+    email: "irene.ic@company.com",
+    role: "ic_member",
+    department: "Internal Committee",
+    avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150",
+  },
 };
 
 // State stored in memory/localStorage for session persistence
@@ -1549,4 +1557,189 @@ export async function fetchHrAiSummary(period = "2026-10") {
     disclaimer: "AI-generated, review before use",
     provider: "deterministic_template",
   };
+}
+
+// ===========================================================================
+// HR Duties Engine API Services
+// ===========================================================================
+
+export async function fetchDutiesHub() {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/api/duties`, {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Failed to load HR duties hub");
+  }
+  return res.json();
+}
+
+export async function fetchDutyDetail(dutyKey) {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/api/duties/${dutyKey}`, {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to load details for duty ${dutyKey}`);
+  }
+  return res.json();
+}
+
+export async function fetchDutyTasks(dutyKey, status = null) {
+  const token = getToken();
+  const url = new URL(`${API_BASE}/api/duties/${dutyKey}/tasks`);
+  if (status) url.searchParams.append("status", status);
+
+  const res = await fetch(url.toString(), {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to fetch tasks for duty ${dutyKey}`);
+  }
+  return res.json();
+}
+
+export async function decideDutyTask(dutyKey, taskId, decision, decisionNote = "", expectedVersion = null) {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/api/duties/${dutyKey}/tasks/${taskId}/decide`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      decision,
+      decision_note: decisionNote,
+      expected_version: expectedVersion,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Approval decision failed: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function triggerDutyBotRun(dutyKey) {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/api/duties/${dutyKey}/bot-run`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to execute bot action for ${dutyKey}`);
+  }
+  return res.json();
+}
+
+export async function submitDutyLeaveRequest(leaveData) {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/api/duties/attendance_leave/request-leave`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(leaveData),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Failed to submit leave request");
+  }
+  return res.json();
+}
+
+export async function submitPoshComplaint(complaintData) {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/api/duties/posh/intake`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(complaintData),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Failed to submit confidential POSH complaint");
+  }
+  return res.json();
+}
+
+export async function fetchPoshRecord(caseNumber) {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/api/duties/posh/records/${caseNumber}`, {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Access restricted or record not found");
+  }
+  return res.json();
+}
+
+export async function fetchPoshAnnualReport(year = 2026) {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/api/duties/posh/annual-report?year=${year}`, {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Failed to load POSH annual report");
+  }
+  return res.json();
+}
+
+export async function searchPolicies(q) {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/api/duties/policies_records/search?q=${encodeURIComponent(q)}`, {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Policy search failed");
+  }
+  return res.json();
+}
+
+export async function triggerAIDraft(dutyKey, context) {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/api/duties/${dutyKey}/ai-draft`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ context }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "AI drafting hook failed");
+  }
+  return res.json();
 }

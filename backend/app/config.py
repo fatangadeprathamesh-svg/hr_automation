@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_MINUTES: int = 480
     GOOGLE_CLIENT_ID: Optional[str] = None
+    POSH_ENCRYPTION_KEY: str = "9kITcpy5f5xwWB0f9uqA1CCjDcLA_EdevoGJSROIJQc="
 
     # Email & Verification (OTP)
     SMTP_HOST: Optional[str] = None

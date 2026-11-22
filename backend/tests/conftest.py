@@ -55,7 +55,17 @@ def setup_test_db():
         hire_date=date(2023, 6, 1),
         is_active=True,
     )
-    db.add_all([mgr1, emp1, hr1])
+    ic1 = Employee(
+        employee_id="IC001",
+        organization_id="ORG_DEMO_01",
+        email="irene.ic@example.com",
+        full_name="Irene IC Member",
+        manager_id=None,
+        timezone="Internal Committee",
+        hire_date=date(2023, 1, 1),
+        is_active=True,
+    )
+    db.add_all([mgr1, emp1, hr1, ic1])
     db.commit()
     from app.seed import seed_user_accounts
     seed_user_accounts(db)

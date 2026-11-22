@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { UserCheck, Users, Shield, ScrollText, LogOut, FileSearch, UploadCloud } from 'lucide-react';
+import { UserCheck, Users, Shield, ScrollText, LogOut, FileSearch, UploadCloud, Briefcase } from 'lucide-react';
 import { logout } from '../../api';
 
 export default function Sidebar() {
@@ -10,6 +10,7 @@ export default function Sidebar() {
     { to: '/employee', label: 'Employee', icon: UserCheck },
     { to: '/manager', label: 'Manager', icon: Users },
     { to: '/hr', label: 'HR Admin', icon: Shield },
+    { to: '/duties', label: 'Duties', icon: Briefcase },
     { to: '/data-import', label: 'Import', icon: UploadCloud },
     { to: '/audit-log', label: 'Audit log', icon: ScrollText },
   ];

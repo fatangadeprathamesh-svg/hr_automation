@@ -386,6 +386,10 @@ def init_db_and_seed():
         seed_sample_csv_feeds(db)
         seed_synthetic_history(db)
 
+        # Seed 10 HR Duties with realistic data
+        from app.seed_duties import seed_all_duties
+        seed_all_duties(db)
+
         # Output verification statistics
         total_emp = db.query(Employee).count()
         total_att = db.query(Attendance).count()
