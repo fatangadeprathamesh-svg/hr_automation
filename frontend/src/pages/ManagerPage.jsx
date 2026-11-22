@@ -128,7 +128,7 @@ export default function ManagerPage() {
         />
         <StatsCard
           title="Approvals This Week"
-          value="8"
+          value={data?.total_approvals_count || '0'}
           subtitle="Cryptographically recorded"
           icon={CheckCircle2}
           color="green"

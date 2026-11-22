@@ -639,77 +639,61 @@ export async function fetchReadiness(period = "2026-10") {
     if (res.ok) {
       const data = await res.json();
       const allFlags = (data.blocking_issues || []).concat(data.warnings || []);
-      const score = Math.round(data.readiness_score || 78);
+      const score = Math.round(data.readiness_score !== undefined ? data.readiness_score : 100);
       return {
         period: data.period,
         employee_id: data.employee_id,
         readiness_percentage: score,
-        blocking_count: data.blocking_count,
-        warning_count: data.warning_count,
-        resolved_count: data.resolved_count || 3,
-        can_submit: data.submission_allowed,
-        feed_status: data.data_health === "complete" ? "COMPLETE" : "INCOMPLETE",
-        flags: allFlags.length > 0 ? allFlags.map(f => ({
+        blocking_count: data.blocking_count || 0,
+        warning_count: data.warning_count || 0,
+        resolved_count: data.resolved_count || 0,
+        can_submit: Boolean(data.submission_allowed),
+        feed_status: data.data_health === "complete" ? "COMPLETE" : "EMPTY",
+        flags: allFlags.map(f => ({
           id: f.flag_id,
           rule_id: f.rule_id,
-          rule_name: f.rule_id.replace(/_/g, ' '),
-          severity: f.severity.toUpperCase(),
+          rule_name: (f.rule_id || 'issue').replace(/_/g, ' '),
+          severity: (f.severity || 'warning').toUpperCase(),
           status: f.severity === 'blocking' ? 'Open' : 'Warning',
-          date: f.evidence?.work_date || '2026-10-14',
-          title: f.rule_id.replace(/_/g, ' '),
-          description: f.suggested_action || f.rule_id,
-          evidence: JSON.stringify(f.evidence),
+          date: f.evidence?.work_date || '',
+          title: (f.rule_id || 'issue').replace(/_/g, ' '),
+          description: f.suggested_action || f.rule_id || '',
+          evidence: JSON.stringify(f.evidence || {}),
           record_version: 1,
           policy_version: f.policy_version,
-        })) : mockFlagsState,
+        })),
         trend_history: [
-          { month: "May", score: 92, target: 95 },
-          { month: "Jun", score: 88, target: 95 },
-          { month: "Jul", score: 96, target: 95 },
-          { month: "Aug", score: 82, target: 95 },
-          { month: "Sep", score: 94, target: 95 },
+          { month: "May", score: 100, target: 95 },
+          { month: "Jun", score: 100, target: 95 },
+          { month: "Jul", score: 100, target: 95 },
+          { month: "Aug", score: 100, target: 95 },
+          { month: "Sep", score: 100, target: 95 },
           { month: "Oct", score: score, target: 95 },
         ],
         issues_by_type: [
-          { type: "Missing Punch", count: allFlags.filter(f => f.rule_id?.toLowerCase().includes("punch")).length || 1 },
-          { type: "Hours Mismatch", count: allFlags.filter(f => f.rule_id?.toLowerCase().includes("hour")).length || 1 },
-          { type: "Missing Receipt", count: allFlags.filter(f => f.rule_id?.toLowerCase().includes("receipt")).length || 1 },
+          { type: "Missing Punch", count: allFlags.filter(f => f.rule_id?.toLowerCase().includes("punch")).length },
+          { type: "Hours Mismatch", count: allFlags.filter(f => f.rule_id?.toLowerCase().includes("hour")).length },
+          { type: "Missing Receipt", count: allFlags.filter(f => f.rule_id?.toLowerCase().includes("receipt")).length },
         ],
       };
     }
   } catch (e) {
-    console.warn("Backend API offline, falling back to mock mode:", e);
+    console.warn("Backend API offline or error loading readiness:", e);
   }
 
-  // Graceful fallback to mock data
-  const blockingCount = mockFlagsState.filter((f) => f.severity === "BLOCKING" && f.status !== "Resolved").length;
-  const warningCount = mockFlagsState.filter((f) => f.severity === "WARNING" && f.status !== "Resolved").length;
-  const resolvedCount = mockFlagsState.filter((f) => f.status === "Resolved").length;
-  const readiness = blockingCount === 0 ? 100 : 78;
-
+  // Authentic empty state when no data exists or API is unreachable
   return {
     period,
     employee_id: currentPersona.id,
-    readiness_percentage: readiness,
-    blocking_count: blockingCount,
-    warning_count: warningCount,
-    resolved_count: resolvedCount,
-    can_submit: blockingCount === 0,
-    feed_status: "COMPLETE",
-    flags: [...mockFlagsState],
-    trend_history: [
-      { month: "May", score: 92, target: 95 },
-      { month: "Jun", score: 88, target: 95 },
-      { month: "Jul", score: 96, target: 95 },
-      { month: "Aug", score: 82, target: 95 },
-      { month: "Sep", score: 94, target: 95 },
-      { month: "Oct", score: readiness, target: 95 },
-    ],
-    issues_by_type: [
-      { type: "Missing Punch", count: mockFlagsState.filter(f => f.rule_id === "missing_punch" && f.status !== "Resolved").length },
-      { type: "Hours Mismatch", count: mockFlagsState.filter(f => f.rule_id === "hours_mismatch" && f.status !== "Resolved").length },
-      { type: "Missing Receipt", count: mockFlagsState.filter(f => f.rule_id === "missing_receipt" && f.status !== "Resolved").length },
-    ],
+    readiness_percentage: 100,
+    blocking_count: 0,
+    warning_count: 0,
+    resolved_count: 0,
+    can_submit: true,
+    feed_status: "EMPTY",
+    flags: [],
+    trend_history: [],
+    issues_by_type: [],
   };
 }
 
@@ -862,38 +846,41 @@ export async function fetchPendingCorrections() {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/corrections/pending`, {
-      headers: getAuthHeaders(),
-      credentials: "include",
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const list = Array.isArray(data) ? data : (data.items || []);
-      const mappedItems = list.map((c) => ({
-        correction_id: c.correction_id,
-        employee_id: c.employee_id,
-        employee_name: c.employee_name || c.employee_id,
-        flag_id: c.flag_id || "FLAG-CORR",
-        rule_id: c.entity_name || "correction",
-        rule_name: (c.entity_name || "Correction").replace(/_/g, " "),
-        claimed_difference: c.proposed_data ? JSON.stringify(c.proposed_data) : "+2.0 Hours",
-        employee_reason: c.employee_reason,
-        record_version: c.original_record_version || 1,
-        submitted_at: c.requested_at || new Date().toISOString(),
-      }));
+    const data = await apiFetch('/corrections/pending');
+    const list = Array.isArray(data) ? data : (data.items || []);
+    const mappedItems = list.map((c) => ({
+      correction_id: c.correction_id,
+      employee_id: c.employee_id,
+      employee_name: c.employee_name || c.employee_id,
+      flag_id: c.flag_id || "FLAG-CORR",
+      rule_id: c.entity_name || "correction",
+      rule_name: (c.entity_name || "Correction").replace(/_/g, " "),
+      claimed_difference: c.proposed_data ? JSON.stringify(c.proposed_data) : "",
+      employee_reason: c.employee_reason,
+      record_version: c.original_record_version || 1,
+      submitted_at: c.requested_at || new Date().toISOString(),
+    }));
 
-      return {
-        pending_count: mappedItems.length > 0 ? mappedItems.length : fallbackMock.pending_count,
-        average_approval_days: 1.4,
-        approvals_per_week: fallbackMock.approvals_per_week,
-        items: mappedItems.length > 0 ? mappedItems : fallbackMock.items,
-      };
-    }
+    return {
+      pending_count: mappedItems.length,
+      average_approval_days: 0,
+      approvals_per_week: [
+        { week: "Week 1", approvals: 0 },
+        { week: "Week 2", approvals: 0 },
+        { week: "Week 3", approvals: 0 },
+        { week: "Week 4", approvals: 0 },
+      ],
+      items: mappedItems,
+    };
   } catch (e) {
-    console.warn("Backend API offline, falling back to mock manager queue:", e);
+    console.warn("Could not fetch manager queue:", e);
+    return {
+      pending_count: 0,
+      average_approval_days: 0,
+      approvals_per_week: [],
+      items: [],
+    };
   }
-
-  return fallbackMock;
 }
 
 export async function decideCorrection(correctionId, decision, managerReason) {
@@ -1045,107 +1032,63 @@ export async function fetchHRMetrics(period = "2026-10") {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/submissions?period=${period}`, {
-      headers: getAuthHeaders(),
-      credentials: "include",
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const list = Array.isArray(data) ? data : [];
-      const submitted = list.filter((s) => s.status === "submitted" || s.status === "approved").length;
-      const base = getMockForPeriod(period);
-      if (list.length > 0) {
-        base.submitted_count = submitted;
-        base.pending_count = Math.max(0, 30 - submitted);
-        base.submission_donut = [
-          { name: "Submitted", value: base.submitted_count, fill: "#10B981" },
-          { name: "Pending", value: base.pending_count, fill: "#D4A84B" },
-        ];
-      }
-      return base;
-    }
+    const list = await apiFetch(`/submissions?period=${period}`);
+    const items = Array.isArray(list) ? list : [];
+    const submitted = items.filter((s) => s.status === "submitted" || s.status === "approved").length;
+    return {
+      period,
+      submitted_count: submitted,
+      pending_count: Math.max(0, items.length - submitted),
+      total_employees: items.length,
+      critical_exceptions: 0,
+      readiness_percentage: items.length > 0 ? Math.round((submitted / items.length) * 100) : 100,
+      coverage_percentage: items.length > 0 ? 100 : 0,
+      submission_donut: [
+        { name: "Submitted", value: submitted, fill: "#10B981" },
+        { name: "Pending", value: Math.max(0, items.length - submitted), fill: "#D4A84B" },
+      ],
+      flags_by_family: [],
+    };
   } catch (e) {
-    console.warn("Backend API offline, falling back to mock HR metrics:", e);
+    console.warn("Could not fetch HR metrics:", e);
+    return {
+      period,
+      submitted_count: 0,
+      pending_count: 0,
+      total_employees: 0,
+      critical_exceptions: 0,
+      readiness_percentage: 100,
+      coverage_percentage: 0,
+      submission_donut: [
+        { name: "Submitted", value: 0, fill: "#10B981" },
+        { name: "Pending", value: 0, fill: "#D4A84B" },
+      ],
+      flags_by_family: [],
+    };
   }
-
-  return getMockForPeriod(period);
 }
 
 export async function fetchSubmissions(period = "2026-10") {
-  const mockSubmissions = [
-    {
-      snapshot_id: "SNAP-EMP001-202610",
-      employee_id: "EMP001",
-      employee_name: "Alice Employee",
-      department: "Engineering",
-      period: "2026-10",
-      readiness_score: 100,
-      status: "submitted",
-      submitted_at: "2026-10-28T14:20:00Z",
-      policy_version: "2026.10.v1",
-      hr_decision: null,
-    },
-    {
-      snapshot_id: "SNAP-EMP002-202610",
-      employee_id: "EMP002",
-      employee_name: "Bryan Baker",
-      department: "Product",
-      period: "2026-10",
-      readiness_score: 100,
-      status: "approved",
-      submitted_at: "2026-10-27T11:05:00Z",
-      policy_version: "2026.10.v1",
-      hr_decision: "approved",
-    },
-    {
-      snapshot_id: "SNAP-EMP003-202610",
-      employee_id: "EMP003",
-      employee_name: "Catherine Chen",
-      department: "Marketing",
-      period: "2026-10",
-      readiness_score: 95,
-      status: "returned",
-      submitted_at: "2026-10-26T09:30:00Z",
-      policy_version: "2026.10.v1",
-      hr_decision: "returned",
-      hr_return_reason: "[EMPLOYEE] Missing tax receipt for travel claim #992.",
-    },
-  ];
-
-  if (USE_MOCK) {
-    await new Promise((r) => setTimeout(r, 250));
-    return mockSubmissions;
-  }
-
   try {
-    const res = await fetch(`${API_BASE}/submissions?period=${period}`, {
-      headers: getAuthHeaders(),
-      credentials: "include",
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const list = Array.isArray(data) ? data : [];
-      if (list.length > 0) {
-        return list.map((p) => ({
-          snapshot_id: p.snapshot_id,
-          employee_id: p.employee_id,
-          employee_name: p.frozen_data?.employee?.full_name || p.employee_id,
-          department: "Engineering",
-          period: p.period,
-          readiness_score: p.frozen_data?.audit_summary?.blocking_count === 0 ? 100 : 85,
-          status: p.status,
-          submitted_at: p.submitted_at,
-          policy_version: p.policy_version,
-          hr_decision: p.hr_decision,
-          hr_return_reason: p.hr_return_reason,
-        }));
-      }
-    }
+    const list = await apiFetch(`/submissions?period=${period}`);
+    const items = Array.isArray(list) ? list : [];
+    return items.map((p) => ({
+      snapshot_id: p.snapshot_id,
+      employee_id: p.employee_id,
+      employee_name: p.frozen_data?.employee?.full_name || p.employee_id,
+      department: p.frozen_data?.employee?.department || "General",
+      period: p.period,
+      readiness_score: p.frozen_data?.audit_summary?.blocking_count === 0 ? 100 : 85,
+      status: p.status,
+      submitted_at: p.submitted_at,
+      policy_version: p.policy_version,
+      hr_decision: p.hr_decision,
+      hr_return_reason: p.hr_return_reason,
+    }));
   } catch (e) {
-    console.warn("Backend API offline, falling back to mock submissions:", e);
+    console.warn("Could not fetch submissions:", e);
+    return [];
   }
-
-  return mockSubmissions;
 }
 
 export async function decideSubmission(snapshotId, decision, hrReason, assignedOwner = null) {
@@ -1244,74 +1187,17 @@ export async function createExportPack(snapshotId, exportType = "PDF_JSON_PACK")
 // -------------------------------------------------------------
 
 export async function fetchAuditLog() {
-  if (USE_MOCK) {
-    await new Promise((r) => setTimeout(r, 200));
-    return {
-      total_events: mockAuditLogs.length,
-      ledger_status: "TAMPER_EVIDENT_VALID",
-      root_hash: mockAuditLogs[0].current_hash,
-      events: [...mockAuditLogs],
-    };
-  }
-
-  try {
-    const res = await fetch(`${API_BASE}/audit-events`, {
-      headers: getAuthHeaders(),
-      credentials: "include",
-    });
-    if (res.ok) {
-      const data = await res.json();
-      return data;
-    }
-    const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail || "Failed to fetch audit log");
-  } catch (e) {
-    console.warn("Backend API offline, serving mock audit log:", e);
-  }
-
-  return {
-    total_events: mockAuditLogs.length,
-    ledger_status: "TAMPER_EVIDENT_VALID",
-    root_hash: mockAuditLogs[0].current_hash,
-    events: [...mockAuditLogs],
-  };
+  return apiFetch('/api/audit-events');
 }
 
 export async function verifyLedgerIntegrity() {
-  if (USE_MOCK) {
-    await new Promise((r) => setTimeout(r, 350));
-    return {
-      verified: true,
-      checked_events: mockAuditLogs.length,
-      genesis_hash: "0000000000000000000000000000000000000000000000000000000000000000",
-      head_hash: mockAuditLogs[0].current_hash,
-      timestamp: new Date().toISOString(),
-      message: "Cryptographic hash chain validated: 0 broken links, 0 tampering detected.",
-    };
-  }
+  return apiFetch('/api/audit-events/verify-integrity');
+}
 
-  try {
-    const res = await fetch(`${API_BASE}/audit-events/verify-integrity`, {
-      headers: getAuthHeaders(),
-      credentials: "include",
-    });
-    if (res.ok) {
-      return res.json();
-    }
-    const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail || "Integrity verification failed");
-  } catch (e) {
-    console.warn("Backend API offline, returning local integrity proof:", e);
-  }
-
-  return {
-    verified: true,
-    checked_events: mockAuditLogs.length,
-    genesis_hash: "0000000000000000000000000000000000000000000000000000000000000000",
-    head_hash: mockAuditLogs[0].current_hash,
-    timestamp: new Date().toISOString(),
-    message: "Cryptographic hash chain validated: 0 broken links, 0 tampering detected.",
-  };
+export async function resetAllDataApi() {
+  return apiFetch('/api/admin/reset-data', {
+    method: 'POST',
+  });
 }
 
 // -------------------------------------------------------------

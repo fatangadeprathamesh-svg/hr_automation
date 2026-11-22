@@ -17,6 +17,7 @@ import {
   AlertCircle,
   FileText,
   X,
+  Trash2,
 } from 'lucide-react';
 import {
   uploadMasterCsv,
@@ -26,6 +27,8 @@ import {
   getUploadHistory,
   getMasterRecords,
   getMasterStats,
+  resetAllDataApi,
+  getCurrentPersona,
 } from '../api';
 import GlassCard from '../components/common/GlassCard';
 import StatsCard from '../components/common/StatsCard';
@@ -81,6 +84,13 @@ export default function DataImportPage() {
   const [uploadSuccess, setUploadSuccess] = useState(null);
   const [rejectedRowsData, setRejectedRowsData] = useState([]);
   const [isLoadingRejected, setIsLoadingRejected] = useState(false);
+
+  // Guarded Reset Data state
+  const persona = getCurrentPersona();
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [resetConfirmationInput, setResetConfirmationInput] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetSuccessMsg, setResetSuccessMsg] = useState(null);
 
   // Upload History state
   const [historyList, setHistoryList] = useState([]);
@@ -223,6 +233,25 @@ export default function DataImportPage() {
       console.warn('Failed to fetch rejected rows:', err);
     } finally {
       setIsLoadingRejected(false);
+    }
+  }
+
+  async function handleConfirmReset() {
+    if (resetConfirmationInput !== 'RESET') return;
+    setIsResetting(true);
+    setUploadError(null);
+    try {
+      const res = await resetAllDataApi();
+      setResetSuccessMsg(res.message || 'All ingested and synthetic data purged successfully.');
+      setResetModalOpen(false);
+      setResetConfirmationInput('');
+      loadStats();
+      if (activeTab === 'history') loadHistory();
+      if (activeTab === 'records') loadRecords();
+    } catch (err) {
+      setUploadError(err.message || 'Failed to reset database.');
+    } finally {
+      setIsResetting(false);
     }
   }
 
@@ -409,11 +438,36 @@ export default function DataImportPage() {
             <History className="w-4 h-4" />
             Upload History
           </button>
+
+          {(persona?.role === 'hr_admin' || persona?.role === 'hr') && (
+            <button
+              onClick={() => {
+                setResetConfirmationInput('');
+                setResetModalOpen(true);
+              }}
+              className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800 transition-colors"
+              title="Reset all ingested and synthetic data"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Reset All Data</span>
+            </button>
+          )}
         </div>
       </GlassCard>
 
       {/* Global Notifications */}
       <ErrorBanner message={uploadError} onDismiss={() => setUploadError(null)} />
+      {resetSuccessMsg && (
+        <div className="rounded-2xl border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 p-4 shadow-sm text-xs flex items-center justify-between">
+          <div className="flex items-center gap-3 text-rose-800 dark:text-rose-200">
+            <CheckCircle2 className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0" />
+            <span>{resetSuccessMsg}</span>
+          </div>
+          <button onClick={() => setResetSuccessMsg(null)} className="text-rose-600 hover:text-rose-800 p-1">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
       {uploadSuccess && (
         <div className="rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 p-4 shadow-sm text-xs flex items-center justify-between">
           <div className="flex items-center gap-3 text-emerald-800 dark:text-emerald-200">
@@ -1004,6 +1058,76 @@ export default function DataImportPage() {
             </div>
           )}
         </GlassCard>
+      )}
+
+      {/* Guarded Reset All Data Confirmation Modal */}
+      {resetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="glass-panel w-full max-w-md rounded-3xl p-6 sm:p-7 shadow-2xl relative border border-rose-500/30">
+            <div className="flex items-start justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                <AlertTriangle className="w-5 h-5" />
+                <h3 className="text-base font-bold">Reset All Data</h3>
+              </div>
+              <button
+                onClick={() => setResetModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="py-4 space-y-3 text-xs text-slate-600 dark:text-slate-300">
+              <p>
+                This action is <strong className="text-rose-600 dark:text-rose-400">destructive and irreversible</strong>. It will:
+              </p>
+              <ul className="list-disc pl-5 space-y-1 text-slate-500 dark:text-slate-400">
+                <li>Purge all uploaded master HR CSV records and batch history</li>
+                <li>Clear all attendance, timesheet, leave, and expense claims</li>
+                <li>Reset the compliance audit ledger to its genesis state</li>
+                <li>Preserve administrator accounts, personas, and statutory policy definitions</li>
+              </ul>
+              <p className="font-semibold text-slate-800 dark:text-slate-200 pt-1">
+                To confirm, type <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">RESET</span> below:
+              </p>
+              <input
+                type="text"
+                value={resetConfirmationInput}
+                onChange={(e) => setResetConfirmationInput(e.target.value)}
+                placeholder="Type RESET to confirm"
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setResetModalOpen(false)}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmReset}
+                disabled={resetConfirmationInput !== 'RESET' || isResetting}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white font-bold text-xs shadow-md transition-all cursor-pointer disabled:cursor-not-allowed flex items-center gap-1.5"
+              >
+                {isResetting ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    Resetting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Confirm Purge
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

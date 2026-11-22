@@ -108,6 +108,7 @@ def get_my_readiness(
 
 
 @router.get("/audit-events")
+@router.get("/api/audit-events")
 def list_audit_events(
     limit: int = Query(50, le=200),
     actor: ActorIdentity = Depends(get_current_actor),
@@ -159,6 +160,8 @@ def list_audit_events(
 
 @router.get("/audit-events/verify-integrity")
 @router.post("/audit-events/verify-integrity")
+@router.get("/api/audit-events/verify-integrity")
+@router.post("/api/audit-events/verify-integrity")
 def verify_audit_events_integrity(
     actor: ActorIdentity = Depends(get_current_actor),
     db: Session = Depends(get_db),

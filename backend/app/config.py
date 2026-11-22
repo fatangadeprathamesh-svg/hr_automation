@@ -54,5 +54,8 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: Optional[str] = None
     ANTHROPIC_MODEL: str = "claude-3-haiku-20240307"
 
+    # Seeding demo data (opt-in only, default False)
+    SEED_DEMO_DATA: bool = False
+
 
 settings = Settings()

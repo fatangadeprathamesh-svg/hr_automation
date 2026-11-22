@@ -19,12 +19,22 @@ from app.api.explainers import router as explainers_router
 from app.api.master_uploads import router as master_uploads_router
 from app.api.duties import router as duties_router
 from app.api.consent import router as consent_router
+from app.services.purge_service import ensure_baseline_schema_and_accounts, purge_all_demo_data
+from app.auth.security import require_role
+from app.database import SessionLocal
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize and seed database if necessary
-    init_db_and_seed()
+    # Initialize and seed database: opt-in via SEED_DEMO_DATA=True
+    if settings.SEED_DEMO_DATA:
+        init_db_and_seed()
+    else:
+        db = SessionLocal()
+        try:
+            ensure_baseline_schema_and_accounts(db)
+        finally:
+            db.close()
     yield
 
 
@@ -117,3 +127,21 @@ def get_persona_jwt_token(persona_id: str, db: Session = Depends(get_db)):
         "persona_id": pid,
         "role": role,
     }
+
+
+@app.post("/api/admin/reset-data")
+def reset_all_data(
+    actor: ActorIdentity = Depends(require_role("hr_admin")),
+    db: Session = Depends(get_db),
+):
+    """
+    Safely purges all uploaded, ingested, and synthetic data,
+    resetting the compliance ledger to genesis while keeping schema and admin accounts.
+    """
+    result = purge_all_demo_data(db)
+    return {
+        "status": "ok",
+        "message": f"Successfully purged {result['total_deleted']} records across all tables.",
+        "details": result,
+    }
+
