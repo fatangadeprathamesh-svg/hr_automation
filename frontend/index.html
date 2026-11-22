@@ -4,8 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Month-End HR Self-Audit Assistant</title>
-    <!-- Google Identity Services (GIS) Client Library -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Tailwind CSS CDN for reliable instant dev styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -27,9 +25,9 @@
       }
     </script>
     <script>
-      // Early theme detection to prevent flash of wrong theme
+      // Early theme detection to prevent flash of wrong theme (checks both persistent and session storage)
       try {
-        var saved = localStorage.getItem('hr_theme');
+        var saved = localStorage.getItem('hr_theme') || sessionStorage.getItem('hr_theme');
         if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
           document.documentElement.classList.add('dark');
         } else {

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileSearch, ArrowRight, ShieldCheck, Mail, Lock, User, Sparkles } from 'lucide-react';
 import { login, googleSignIn } from '../api';
 import ErrorBanner from '../components/common/ErrorBanner';
+import Footer from '../components/layout/Footer';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -17,84 +18,46 @@ export default function LoginPage() {
     import.meta.env.VITE_GOOGLE_CLIENT_ID ||
     '486438249549-gopbgo082hs530rll93dmr1p76cdafac.apps.googleusercontent.com';
 
-  useEffect(() => {
-    // Initialize Google Identity Services (GIS)
-    function initGIS() {
+  // Dynamically load Google Identity Services only when user explicitly clicks "Continue with Google"
+  function loadGoogleScript(onReady) {
+    if (window.google?.accounts?.id) {
+      onReady();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => onReady();
+    script.onerror = () => {
+      console.warn('Google Identity Services script failed to load. Using fallback.');
+      onReady();
+    };
+    document.head.appendChild(script);
+  }
+
+  function handleCustomGoogleClick() {
+    setLoading(true);
+    setError(null);
+    loadGoogleScript(() => {
       if (window.google?.accounts?.id && googleClientId) {
         try {
           window.google.accounts.id.initialize({
             client_id: googleClientId,
             callback: handleGoogleCredentialResponse,
             auto_select: false,
-            cancel_on_tap_outside: true,
           });
-
-          const container = document.getElementById('google-signin-btn-container');
-          if (container) {
-            container.innerHTML = '';
-            window.google.accounts.id.renderButton(container, {
-              type: 'standard',
-              theme: 'outline',
-              size: 'large',
-              text: 'continue_with',
-              shape: 'rectangular',
-              width: 384,
-            });
-            const fallback = document.getElementById('google-fallback-btn');
-            if (fallback) fallback.style.display = 'none';
-          }
+          window.google.accounts.id.prompt();
+          setLoading(false);
+          return;
         } catch (e) {
-          console.warn('Google Identity Services initialization notice:', e);
+          console.warn('GIS prompt notice:', e);
         }
       }
-    }
-
-    if (window.google?.accounts?.id) {
-      initGIS();
-    } else {
-      const interval = setInterval(() => {
-        if (window.google?.accounts?.id) {
-          clearInterval(interval);
-          initGIS();
-        }
-      }, 250);
-      return () => clearInterval(interval);
-    }
-  }, [googleClientId]);
-
-  async function handleGoogleCredentialResponse(response) {
-    if (!response?.credential) {
-      setError('Google Sign-In was cancelled or returned no credential.');
-      return;
-    }
-    setError(null);
-    setLoading(true);
-    try {
-      const res = await googleSignIn({ credential: response.credential });
-      const role = res.role || res.persona?.role || 'employee';
-      if (role === 'manager') {
-        navigate('/manager');
-      } else if (role === 'hr_admin') {
-        navigate('/hr');
-      } else {
-        navigate('/employee');
-      }
-    } catch (err) {
-      setError(err.message || 'Google authentication failed.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function handleCustomGoogleClick() {
-    if (window.google?.accounts?.id) {
-      try {
-        window.google.accounts.id.prompt();
-        return;
-      } catch (_) {}
-    }
-    handleGoogleCredentialResponse({
-      credential: `MOCK_GOOGLE_TOKEN_FOR_${email || 'alice@company.com'}`,
+      // DEV fallback token for fast automated / offline testing
+      handleGoogleCredentialResponse({
+        credential: `MOCK_GOOGLE_TOKEN_FOR_${email || 'alice@company.com'}`,
+      });
     });
   }
 
@@ -128,8 +91,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen app-gradient-bg flex flex-col items-center justify-center p-4">
-      {/* Brand Header */}
+    <div className="min-h-screen app-gradient-bg flex flex-col justify-between items-center p-4 sm:p-6">
+      <div className="w-full max-w-md my-auto flex flex-col items-center">
+        {/* Brand Header */}
       <div className="mb-6 text-center">
         <div className="w-14 h-14 rounded-2xl bg-[#F26A21] flex items-center justify-center text-white mx-auto shadow-lg shadow-orange-500/30 mb-3">
           <FileSearch className="w-8 h-8" />
@@ -362,9 +326,15 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-6">
-        Protected by bcrypt password hashing, 10m OTP email verification, and session rate limiting.
-      </p>
+        <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-6">
+          Protected by bcrypt password hashing, 10m OTP email verification, and session rate limiting.
+        </p>
+      </div>
+
+      {/* Public Footer */}
+      <div className="w-full max-w-4xl mx-auto">
+        <Footer />
+      </div>
     </div>
   );
 }

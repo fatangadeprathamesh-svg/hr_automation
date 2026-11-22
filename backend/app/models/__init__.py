@@ -45,6 +45,7 @@ from app.models.duties import (
     PerformanceCycle,
     PerformanceReview,
 )
+from app.models.consent import ConsentLog
 
 __all__ = [
     "Base",
@@ -89,4 +90,5 @@ __all__ = [
     "RetentionRecord",
     "PerformanceCycle",
     "PerformanceReview",
+    "ConsentLog",
 ]

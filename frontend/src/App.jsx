@@ -9,6 +9,11 @@ import AuditLogPage from './pages/AuditLogPage';
 import DataImportPage from './pages/DataImportPage';
 import DutiesHubPage from './pages/DutiesHubPage';
 import DutyDetailPage from './pages/DutyDetailPage';
+import PrivacyPolicyPage from './pages/legal/PrivacyPolicyPage';
+import TermsOfUsePage from './pages/legal/TermsOfUsePage';
+import CookiePolicyPage from './pages/legal/CookiePolicyPage';
+import ContactPage from './pages/legal/ContactPage';
+import CookieConsentBanner from './components/common/CookieConsentBanner';
 import AppLayout from './components/layout/AppLayout';
 import { getCurrentPersona } from './api';
 
@@ -25,6 +30,12 @@ export default function App() {
         {/* Public Authentication Shell Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/verify" element={<VerifyOtpPage />} />
+
+        {/* Public Legal & Transparency Routes */}
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms" element={<TermsOfUsePage />} />
+        <Route path="/cookies" element={<CookiePolicyPage />} />
+        <Route path="/contact" element={<ContactPage />} />
 
         {/* Protected Application Shell Routes wrapped by AppLayout */}
         <Route
@@ -47,6 +58,9 @@ export default function App() {
         {/* Fallback: Unknown URLs navigate to /login */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
+
+      {/* Global DPDP Act 2023 Compliant Cookie & Privacy Consent Banner */}
+      <CookieConsentBanner />
     </BrowserRouter>
   );
 }

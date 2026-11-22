@@ -50,13 +50,37 @@ let currentPersona = PERSONAS.EMP001;
 let currentToken = localStorage.getItem("hr_auth_token") || "DEV_TOKEN_EMP001_employee";
 let devMode = true;
 
-// Initialize theme from storage
+// Helper to check preferences consent
+function canPersistPreferences() {
+  try {
+    const raw = localStorage.getItem('hr_cookie_consent');
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    return Boolean(parsed?.choices?.preferences);
+  } catch (_) {
+    return false;
+  }
+}
+
+// Initialize theme from storage (prefers persistent if allowed, else session)
 export function getSavedTheme() {
-  return localStorage.getItem("hr_theme") || "light";
+  try {
+    return localStorage.getItem("hr_theme") || sessionStorage.getItem("hr_theme") || "light";
+  } catch (_) {
+    return "light";
+  }
 }
 
 export function saveTheme(theme) {
-  localStorage.setItem("hr_theme", theme);
+  try {
+    if (canPersistPreferences()) {
+      localStorage.setItem("hr_theme", theme);
+    } else {
+      sessionStorage.setItem("hr_theme", theme);
+      localStorage.removeItem("hr_theme");
+    }
+  } catch (_) {}
+
   if (theme === "dark") {
     document.documentElement.classList.add("dark");
   } else {

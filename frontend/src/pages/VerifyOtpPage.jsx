@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ShieldCheck, CheckCircle2, RotateCw, ArrowLeft, ShieldAlert } from 'lucide-react';
 import { verifyOtp, resendOtp, getCurrentPersona } from '../api';
 import ErrorBanner from '../components/common/ErrorBanner';
+import Footer from '../components/layout/Footer';
 
 export default function VerifyOtpPage() {
   const navigate = useNavigate();
@@ -141,8 +142,9 @@ export default function VerifyOtpPage() {
   }
 
   return (
-    <div className="min-h-screen app-gradient-bg flex flex-col items-center justify-center p-4">
-      {/* Brand Header */}
+    <div className="min-h-screen app-gradient-bg flex flex-col justify-between items-center p-4 sm:p-6">
+      <div className="w-full max-w-md my-auto flex flex-col items-center">
+        {/* Brand Header */}
       <div className="mb-6 text-center">
         <div className="w-14 h-14 rounded-2xl bg-[#F26A21] flex items-center justify-center text-white mx-auto shadow-lg shadow-orange-500/30 mb-3">
           <ShieldCheck className="w-8 h-8" />
@@ -234,6 +236,12 @@ export default function VerifyOtpPage() {
             {resendSeconds > 0 ? `Resend code (${resendSeconds}s)` : 'Resend code'}
           </button>
         </div>
+      </div>
+      </div>
+
+      {/* Public Footer */}
+      <div className="w-full max-w-4xl mx-auto">
+        <Footer />
       </div>
     </div>
   );
