@@ -96,9 +96,27 @@ def list_pending_corrections(
     query = db.query(Correction)
 
     if actor.role == "manager":
-        # Find direct reports
-        reports = db.query(Employee.employee_id).filter(Employee.manager_id == actor.actor_id).all()
-        report_ids = [r[0] for r in reports]
+        # Match manager by employee_id or email, then find direct reports where manager name matches
+        clean_email = (actor.email or "").strip().lower()
+        mgr_emp = db.query(Employee).filter(
+            or_(
+                Employee.employee_id == actor.actor_id,
+                func.lower(Employee.email) == clean_email,
+                func.lower(Employee.email) == clean_email.replace("@example.com", "@company.com"),
+                func.lower(Employee.email) == clean_email.replace("@company.com", "@example.com"),
+            )
+        ).first()
+
+        report_ids = []
+        if mgr_emp:
+            reports = db.query(Employee.employee_id).filter(
+                or_(
+                    Employee.manager == mgr_emp.full_name,
+                    Employee.manager_id == mgr_emp.employee_id,
+                )
+            ).all()
+            report_ids = [r[0] for r in reports]
+
         query = query.filter(Correction.employee_id.in_(report_ids), Correction.status == "pending_review")
 
     elif actor.role == "employee":

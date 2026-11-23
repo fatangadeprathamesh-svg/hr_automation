@@ -23,11 +23,15 @@ class ExpiringDocumentsRule(BaseRule):
                 RuleResult(
                     rule_id=self.rule_id,
                     rule_version=self.rule_version,
-                    status=RuleOutcome.NOT_APPLICABLE,
+                    status=RuleOutcome.UNKNOWN,
                     severity=RuleSeverity.INFO,
-                    evidence={"message": "No compliance documents on file for this period."},
+                    evidence={
+                        "message": "No compliance documents on file in import / not enough data.",
+                        "data_health_issue": "NO_DOCUMENT_DATA",
+                    },
                     policy_version=policy_version,
-                    suggested_action=None,
+                    suggested_action="Upload statutory identity or compliance documents.",
+                    is_data_health_issue=True,
                 )
             )
             return results

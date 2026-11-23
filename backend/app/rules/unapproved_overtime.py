@@ -3,7 +3,7 @@ from app.rules.base import BaseRule, RuleResult, RuleOutcome, RuleSeverity
 
 
 class UnapprovedOvertimeRule(BaseRule):
-    rule_id = "UNAPPROVED_OVERTIME"
+    rule_id = "OVERTIME_NO_APPROVAL"
     rule_version = "1.0"
 
     def evaluate(
@@ -12,171 +12,80 @@ class UnapprovedOvertimeRule(BaseRule):
         policy_config: Dict[str, Any],
         policy_version: str,
     ) -> List[RuleResult]:
+        """
+        OVERTIME_NO_APPROVAL:
+        1. Attendance: hours_total > 9.5 and overtime_approved = N (blocking).
+        2. Timesheets: total_hours > 12.0 (blocking) or overtime_hours > 0 with pending approval (warning).
+        """
         results: List[RuleResult] = []
+        attendance_records = context.get("attendance", [])
         timesheets = context.get("timesheets", [])
 
-        if not timesheets:
+        if not attendance_records and not timesheets:
             results.append(
                 RuleResult(
                     rule_id=self.rule_id,
                     rule_version=self.rule_version,
                     status=RuleOutcome.NOT_APPLICABLE,
                     severity=RuleSeverity.INFO,
-                    evidence={"message": "No timesheet records found for this period."},
+                    evidence={"message": "No attendance or timesheet records found for this period."},
                     policy_version=policy_version,
                     suggested_action=None,
                 )
             )
             return results
 
-        config = policy_config.get("unapproved_overtime", {})
-        standard_daily_hours = float(config.get("standard_daily_hours", 8.0))
-        blocking_threshold = float(config.get("overtime_blocking_threshold", 12.0))
+        # 1. Evaluate Attendance (if present)
+        for att in attendance_records:
+            record_id = getattr(att, "source_record_id", None) or getattr(att, "id", "UNKNOWN")
+            work_date = getattr(att, "work_date", None)
+            hours_raw = getattr(att, "hours_total", None)
+            ot_approved = (getattr(att, "overtime_approved", "") or "").strip().upper()
 
-        for ts in timesheets:
-            record_id = getattr(ts, "source_record_id", None) or getattr(ts, "id", "UNKNOWN")
-            work_date = getattr(ts, "work_date", None)
-            approval = getattr(ts, "approval_state", "pending")
+            if hours_raw is not None:
+                try:
+                    hrs = float(hours_raw)
+                except (ValueError, TypeError):
+                    hrs = 0.0
+            elif getattr(att, "clock_in", None) and getattr(att, "clock_out", None):
+                hrs = (att.clock_out - att.clock_in).total_seconds() / 3600.0
+            else:
+                hrs = 0.0
 
-            # Data health checks
-            if work_date is None:
-                results.append(
-                    RuleResult(
-                        rule_id=self.rule_id,
-                        rule_version=self.rule_version,
-                        status=RuleOutcome.UNKNOWN,
-                        severity=RuleSeverity.WARNING,
-                        evidence={
-                            "record_id": record_id,
-                            "error": "MISSING_WORK_DATE",
-                        },
-                        policy_version=policy_version,
-                        suggested_action="Investigate timesheet with missing work date.",
-                        is_data_health_issue=True,
+            if hrs > 9.5:
+                if ot_approved in ("N", "NO", "0", "FALSE", ""):
+                    results.append(
+                        RuleResult(
+                            rule_id=self.rule_id,
+                            rule_version=self.rule_version,
+                            status=RuleOutcome.FAIL,
+                            severity=RuleSeverity.BLOCKING,
+                            evidence={
+                                "record_id": record_id,
+                                "work_date": str(work_date) if work_date else None,
+                                "hours_total": hrs,
+                                "overtime_approved": ot_approved or "N",
+                            },
+                            policy_version=policy_version,
+                            suggested_action="Request manager overtime approval for hours exceeding 9.5 hours.",
+                        )
                     )
-                )
-                continue
-
-            reg_raw = getattr(ts, "regular_hours", 0.0)
-            ot_raw = getattr(ts, "overtime_hours", 0.0)
-
-            if reg_raw is None or ot_raw is None:
-                results.append(
-                    RuleResult(
-                        rule_id=self.rule_id,
-                        rule_version=self.rule_version,
-                        status=RuleOutcome.UNKNOWN,
-                        severity=RuleSeverity.WARNING,
-                        evidence={
-                            "record_id": record_id,
-                            "error": "NULL_HOURS_VALUE",
-                            "work_date": str(work_date),
-                        },
-                        policy_version=policy_version,
-                        suggested_action="Investigate timesheet with null regular or overtime hours.",
-                        is_data_health_issue=True,
+                else:
+                    results.append(
+                        RuleResult(
+                            rule_id=self.rule_id,
+                            rule_version=self.rule_version,
+                            status=RuleOutcome.PASS,
+                            severity=RuleSeverity.INFO,
+                            evidence={
+                                "record_id": record_id,
+                                "work_date": str(work_date) if work_date else None,
+                                "hours_total": hrs,
+                                "overtime_approved": ot_approved,
+                            },
+                            policy_version=policy_version,
+                        )
                     )
-                )
-                continue
-
-            reg = float(reg_raw)
-            ot = float(ot_raw)
-
-            if reg < 0 or ot < 0:
-                results.append(
-                    RuleResult(
-                        rule_id=self.rule_id,
-                        rule_version=self.rule_version,
-                        status=RuleOutcome.UNKNOWN,
-                        severity=RuleSeverity.WARNING,
-                        evidence={
-                            "record_id": record_id,
-                            "error": "NEGATIVE_HOURS",
-                            "work_date": str(work_date),
-                            "regular_hours": reg,
-                            "overtime_hours": ot,
-                        },
-                        policy_version=policy_version,
-                        suggested_action="Investigate corrupted negative timesheet hours.",
-                        is_data_health_issue=True,
-                    )
-                )
-                continue
-
-            total_hours = round(reg + ot, 2)
-
-            if total_hours > 24.0:
-                results.append(
-                    RuleResult(
-                        rule_id=self.rule_id,
-                        rule_version=self.rule_version,
-                        status=RuleOutcome.UNKNOWN,
-                        severity=RuleSeverity.WARNING,
-                        evidence={
-                            "record_id": record_id,
-                            "error": "HOURS_EXCEED_24_IN_A_DAY",
-                            "work_date": str(work_date),
-                            "total_hours": total_hours,
-                        },
-                        policy_version=policy_version,
-                        suggested_action="Investigate corrupted timesheet exceeding 24 hours in a single calendar day.",
-                        is_data_health_issue=True,
-                    )
-                )
-                continue
-
-            # Case 1: Extreme hours exceeding blocking threshold (e.g. > 12h)
-            if total_hours > blocking_threshold:
-                results.append(
-                    RuleResult(
-                        rule_id=self.rule_id,
-                        rule_version=self.rule_version,
-                        status=RuleOutcome.FAIL,
-                        severity=RuleSeverity.BLOCKING,
-                        evidence={
-                            "record_id": record_id,
-                            "entity_id": getattr(ts, "id", None),
-                            "work_date": str(work_date),
-                            "regular_hours": reg,
-                            "overtime_hours": ot,
-                            "total_hours": total_hours,
-                            "blocking_threshold": blocking_threshold,
-                            "approval_state": approval,
-                        },
-                        policy_version=policy_version,
-                        suggested_action=(
-                            f"Total hours ({total_hours:.1f}h) on {work_date} exceed excessive work threshold "
-                            f"({blocking_threshold:.1f}h). Mandatory manager and HR compliance sign-off required."
-                        ),
-                    )
-                )
-            # Case 2: Overtime logged or total > standard daily hours without approved state
-            elif (ot > 0 or total_hours > standard_daily_hours) and approval != "approved":
-                unapproved_ot = round(ot if ot > 0 else (total_hours - standard_daily_hours), 2)
-                results.append(
-                    RuleResult(
-                        rule_id=self.rule_id,
-                        rule_version=self.rule_version,
-                        status=RuleOutcome.FAIL,
-                        severity=RuleSeverity.WARNING,
-                        evidence={
-                            "record_id": record_id,
-                            "entity_id": getattr(ts, "id", None),
-                            "work_date": str(work_date),
-                            "regular_hours": reg,
-                            "overtime_hours": ot,
-                            "total_hours": total_hours,
-                            "unapproved_overtime_hours": unapproved_ot,
-                            "approval_state": approval,
-                        },
-                        policy_version=policy_version,
-                        suggested_action=(
-                            f"Overtime of {unapproved_ot:.1f}h on {work_date} is currently '{approval}'. "
-                            f"Obtain manager overtime approval before month-end signoff."
-                        ),
-                    )
-                )
-            # Case 3: Compliant regular hours or approved overtime <= blocking threshold
             else:
                 results.append(
                     RuleResult(
@@ -186,14 +95,95 @@ class UnapprovedOvertimeRule(BaseRule):
                         severity=RuleSeverity.INFO,
                         evidence={
                             "record_id": record_id,
-                            "work_date": str(work_date),
-                            "regular_hours": reg,
-                            "overtime_hours": ot,
-                            "total_hours": total_hours,
-                            "approval_state": approval,
+                            "work_date": str(work_date) if work_date else None,
+                            "hours_total": hrs,
+                            "message": f"Hours ({hrs}h) within standard limit (<= 9.5h).",
                         },
                         policy_version=policy_version,
                     )
                 )
+
+        # 2. Evaluate Timesheets (if present)
+        if timesheets:
+            for ts in timesheets:
+                record_id = getattr(ts, "source_record_id", None) or getattr(ts, "id", "UNKNOWN")
+                work_date = getattr(ts, "work_date", None)
+                reg_h = float(getattr(ts, "regular_hours", 0.0) or 0.0)
+                ot_h = float(getattr(ts, "overtime_hours", 0.0) or 0.0)
+                total_h = reg_h + ot_h
+                appr = (getattr(ts, "approval_state", "") or "").strip().lower()
+
+                # Data health check: corrupted hours (>24h or negative)
+                if total_h > 24.0 or reg_h < 0.0 or ot_h < 0.0:
+                    results.append(
+                        RuleResult(
+                            rule_id=self.rule_id,
+                            rule_version=self.rule_version,
+                            status=RuleOutcome.UNKNOWN,
+                            severity=RuleSeverity.WARNING,
+                            evidence={
+                                "record_id": record_id,
+                                "work_date": str(work_date) if work_date else None,
+                                "total_hours": total_h,
+                                "message": f"Corrupted timesheet hours (regular: {reg_h}, ot: {ot_h}).",
+                            },
+                            is_data_health_issue=True,
+                            policy_version=policy_version,
+                            suggested_action="Data health issue: contact payroll admin to correct negative or impossible hours.",
+                        )
+                    )
+                    continue
+
+                if total_h > 12.0:
+                    results.append(
+                        RuleResult(
+                            rule_id=self.rule_id,
+                            rule_version=self.rule_version,
+                            status=RuleOutcome.FAIL,
+                            severity=RuleSeverity.BLOCKING,
+                            evidence={
+                                "record_id": record_id,
+                                "work_date": str(work_date) if work_date else None,
+                                "total_hours": total_h,
+                                "overtime_hours": ot_h,
+                                "unapproved_overtime_hours": ot_h,
+                                "message": f"Excessive work hours ({total_h}h) exceeds 12.0h maximum limit.",
+                            },
+                            policy_version=policy_version,
+                            suggested_action="Exceeds 12.0h statutory maximum shift length.",
+                        )
+                    )
+                elif ot_h > 0 and appr in ("pending", "unapproved", "pending_review"):
+                    results.append(
+                        RuleResult(
+                            rule_id=self.rule_id,
+                            rule_version=self.rule_version,
+                            status=RuleOutcome.FAIL,
+                            severity=RuleSeverity.WARNING,
+                            evidence={
+                                "record_id": record_id,
+                                "work_date": str(work_date) if work_date else None,
+                                "overtime_hours": ot_h,
+                                "unapproved_overtime_hours": ot_h,
+                                "approval_state": appr,
+                            },
+                            policy_version=policy_version,
+                            suggested_action="Manager approval required for overtime hours.",
+                        )
+                    )
+                elif not attendance_records:
+                    results.append(
+                        RuleResult(
+                            rule_id=self.rule_id,
+                            rule_version=self.rule_version,
+                            status=RuleOutcome.PASS,
+                            severity=RuleSeverity.INFO,
+                            evidence={
+                                "record_id": record_id,
+                                "total_hours": total_h,
+                            },
+                            policy_version=policy_version,
+                        )
+                    )
 
         return results

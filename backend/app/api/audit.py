@@ -5,10 +5,21 @@ from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from sqlalchemy import or_, func, distinct
 from app.database import get_db
-from app.auth.security import get_current_actor, ActorIdentity
+from app.auth.security import get_current_actor, ActorIdentity, require_role
 from app.rules.engine import AuditEngine
-from app.models.hr import AuditRun, AuditFlag, SourceImport, Employee, AuditEvent
+from app.models.hr import (
+    AuditRun,
+    AuditFlag,
+    SourceImport,
+    Employee,
+    AuditEvent,
+    Attendance,
+    Timesheet,
+    ExpenseClaim,
+    Leave,
+)
 
 router = APIRouter(tags=["Audit"])
 
@@ -48,6 +59,50 @@ def trigger_audit_run(
     return result
 
 
+@router.get("/api/audit/periods")
+@router.get("/audit/periods")
+def list_audit_periods(
+    actor: ActorIdentity = Depends(get_current_actor),
+    db: Session = Depends(get_db),
+):
+    """Returns all audit periods detected from operational records, latest first."""
+    periods = set()
+    for row in db.query(distinct(func.strftime("%Y-%m", Attendance.work_date))).all():
+        if row[0]:
+            periods.add(row[0])
+    for row in db.query(distinct(func.strftime("%Y-%m", Timesheet.work_date))).all():
+        if row[0]:
+            periods.add(row[0])
+    for row in db.query(distinct(func.strftime("%Y-%m", ExpenseClaim.claim_date))).all():
+        if row[0]:
+            periods.add(row[0])
+    if not periods:
+        periods.add("2026-10")
+
+    sorted_periods = sorted(list(periods), reverse=True)
+    return {
+        "periods": sorted_periods,
+        "default_period": sorted_periods[0] if sorted_periods else "2026-10",
+    }
+
+
+@router.post("/api/audit/re-run")
+@router.post("/audit-re-run")
+def rerun_audit(
+    period: Optional[str] = Query(None),
+    actor: ActorIdentity = Depends(require_role("hr_admin", "hr", "service")),
+    db: Session = Depends(get_db),
+):
+    """Triggers deterministic rules engine evaluation across all employees for HR Admin."""
+    engine = AuditEngine()
+    summary = engine.evaluate_all_employees(db, period=period, trigger_source="hr_manual_rerun")
+    return {
+        "success": True,
+        "message": f"Audit evaluation completed for {summary['total_employees']} employees.",
+        "summary": summary,
+    }
+
+
 @router.get("/employees/me/readiness")
 def get_my_readiness(
     period: str = Query("2026-10", description="Audit period format YYYY-MM"),
@@ -56,9 +111,68 @@ def get_my_readiness(
 ):
     """
     Returns current month-end self-audit readiness for the authenticated employee.
-    Derives employee_id server-side from actor.actor_id.
+    Derives employee_id server-side from verified identity or email linkage.
     """
-    employee_id = actor.actor_id
+    clean_email = (actor.email or "").strip().lower()
+    candidate_emails = [clean_email]
+    if "@example.com" in clean_email:
+        candidate_emails.append(clean_email.replace("@example.com", "@company.com"))
+    elif "@company.com" in clean_email:
+        candidate_emails.append(clean_email.replace("@company.com", "@example.com"))
+
+    # Resolve employee profile
+    emp = db.query(Employee).filter(
+        or_(
+            Employee.employee_id == actor.actor_id,
+            *[func.lower(Employee.email) == ce for ce in candidate_emails]
+        )
+    ).first()
+
+    if not emp:
+        return {
+            "is_linked": False,
+            "has_data": False,
+            "has_evaluated": False,
+            "employee_id": None,
+            "employee_name": None,
+            "period": period,
+            "message": "Your account is not linked to an employee record yet. Import the master CSV or ask HR.",
+            "readiness_score": None,
+            "blocking_count": 0,
+            "warning_count": 0,
+            "blocking_issues": [],
+            "warnings": [],
+            "trend_history": [],
+            "category_breakdown": [],
+            "submission_allowed": False,
+        }
+
+    employee_id = emp.employee_id
+
+    # Check whether imported records exist for this employee
+    has_att = db.query(Attendance).filter(Attendance.employee_id == employee_id).first() is not None
+    has_ts = db.query(Timesheet).filter(Timesheet.employee_id == employee_id).first() is not None
+    has_exp = db.query(ExpenseClaim).filter(ExpenseClaim.employee_id == employee_id).first() is not None
+    has_lv = db.query(Leave).filter(Leave.employee_id == employee_id).first() is not None
+
+    if not (has_att or has_ts or has_exp or has_lv):
+        return {
+            "is_linked": True,
+            "has_data": False,
+            "has_evaluated": False,
+            "employee_id": employee_id,
+            "employee_name": emp.full_name,
+            "period": period,
+            "message": "No imported records found for your account.",
+            "readiness_score": None,
+            "blocking_count": 0,
+            "warning_count": 0,
+            "blocking_issues": [],
+            "warnings": [],
+            "trend_history": [],
+            "category_breakdown": [],
+            "submission_allowed": False,
+        }
 
     # Run fresh audit to ensure up-to-the-second state
     engine = AuditEngine()
@@ -75,15 +189,58 @@ def get_my_readiness(
     passed_checks = [f for f in all_flags if f["status"] == "pass"]
     applicable_checks = [f for f in all_flags if f["status"] in ("pass", "fail", "unknown")]
 
-    total_applicable = len(applicable_checks)
-    if total_applicable > 0:
-        readiness_score = round((len(passed_checks) / total_applicable) * 100.0, 1)
+    has_evaluated = len(applicable_checks) > 0
+    if len(applicable_checks) > 0:
+        readiness_score = round((len(passed_checks) / len(applicable_checks)) * 100.0, 1)
     else:
-        readiness_score = 100.0
+        readiness_score = 100.0 if len(blocking_issues) == 0 else 0.0
 
-    # Non-negotiable Rule 6: Submission gate.
-    # Readiness percentage is informational only and MUST NEVER override a blocker.
     submission_allowed = (len(blocking_issues) == 0 and audit_summary["data_health"] == "complete")
+
+    # Real open issues by category
+    cat_counts = {"attendance": 0, "timesheets": 0, "expenses": 0, "leave": 0}
+    for f in blocking_issues:
+        r_id = (f.get("rule_id") or "").upper()
+        if "PUNCH" in r_id or "OVERTIME" in r_id:
+            cat_counts["attendance"] += 1
+        elif "HOURS" in r_id or "TIMESHEET" in r_id or "APPROVAL" in r_id:
+            cat_counts["timesheets"] += 1
+        elif "RECEIPT" in r_id or "CLAIM" in r_id or "EXPENSE" in r_id:
+            cat_counts["expenses"] += 1
+        elif "LEAVE" in r_id:
+            cat_counts["leave"] += 1
+
+    category_breakdown = [
+        {"category": "Attendance", "count": cat_counts["attendance"]},
+        {"category": "Timesheets", "count": cat_counts["timesheets"]},
+        {"category": "Expenses", "count": cat_counts["expenses"]},
+        {"category": "Leave", "count": cat_counts["leave"]},
+    ]
+
+    # Real 6-month trend computed from real findings
+    trend_history = []
+    periods_with_runs = (
+        db.query(AuditRun.period)
+        .filter(AuditRun.employee_id == employee_id)
+        .distinct()
+        .order_by(AuditRun.period.asc())
+        .all()
+    )
+
+    for p_row in periods_with_runs:
+        p_val = p_row[0]
+        r_run = db.query(AuditRun).filter(AuditRun.employee_id == employee_id, AuditRun.period == p_val).first()
+        if r_run:
+            total_c = sum(1 for fl in r_run.flags if fl.outcome in ("pass", "fail", "unknown"))
+            pass_c = sum(1 for fl in r_run.flags if fl.outcome == "pass")
+            score = round((pass_c / total_c) * 100.0, 1) if total_c > 0 else (100.0 if r_run.blocking_count == 0 else 0.0)
+            trend_history.append({
+                "month": p_val,
+                "readiness": score,
+                "blockers": r_run.blocking_count,
+                "warnings": r_run.warning_count,
+                "has_data": True,
+            })
 
     # Source coverage
     imports = db.query(SourceImport).filter(SourceImport.covered_period == period).all()
@@ -92,16 +249,22 @@ def get_my_readiness(
         feed_status[imp.source_system] = "complete" if imp.completeness_flag else "incomplete"
 
     return {
+        "is_linked": True,
+        "has_data": True,
+        "has_evaluated": has_evaluated,
         "employee_id": employee_id,
+        "employee_name": emp.full_name,
         "period": period,
         "data_health": audit_summary["data_health"],
         "readiness_score": readiness_score,
-        "readiness_formula": "readiness_score = (passed_checks / total_applicable_checks) * 100 (Informational only; blockers prevent submission)",
+        "readiness_formula": "readiness_score = (passed_checks / total_applicable_checks) * 100",
         "submission_allowed": submission_allowed,
         "blocking_count": len(blocking_issues),
         "warning_count": len(warnings),
         "blocking_issues": blocking_issues,
         "warnings": warnings,
+        "category_breakdown": category_breakdown,
+        "trend_history": trend_history,
         "source_coverage": feed_status,
         "latest_audit_run_id": audit_summary["audit_run_id"],
     }

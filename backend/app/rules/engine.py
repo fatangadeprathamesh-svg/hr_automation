@@ -13,6 +13,7 @@ from app.models.hr import (
     PolicyVersion,
     AuditRun,
     AuditFlag,
+    AuditEvent,
 )
 from app.models.base import generate_uuid
 from app.rules.base import BaseRule, RuleResult, RuleOutcome, RuleSeverity
@@ -46,12 +47,11 @@ DEFAULT_POLICY_CONFIG = {
     },
     "over_limit_claim": {
         "category_limits": {
-            "meals": 75.0,
-            "travel": 500.0,
-            "supplies": 200.0,
-            "training": 1000.0,
-            "lodging": 350.0,
-            "transport": 100.0,
+            "meals": 60.0,
+            "travel": 300.0,
+            "software": 150.0,
+            "training": 400.0,
+            "fuel": 80.0,
         },
         "default_limit": 300.0,
     },
@@ -211,6 +211,16 @@ class AuditEngine:
         # Submission gate pre-check: zero blockers AND complete data health
         submission_allowed = (blocking_count == 0 and data_health == "complete")
 
+        # De-duplicate: clean up previous runs and flags for this employee & period
+        old_runs = db.query(AuditRun).filter(
+            AuditRun.employee_id == employee_id,
+            AuditRun.period == period,
+        ).all()
+        for old_r in old_runs:
+            db.query(AuditFlag).filter(AuditFlag.audit_run_id == old_r.audit_run_id).delete(synchronize_session=False)
+            db.delete(old_r)
+        db.flush()
+
         # 4. Persist AuditRun
         audit_run = AuditRun(
             audit_run_id=generate_uuid(),
@@ -227,15 +237,15 @@ class AuditEngine:
         db.add(audit_run)
         db.flush()
 
-        # 5. Persist Flags
+        # 5. Persist Flags keyed by rule + record_id
         persisted_flags = []
         for r in all_results:
-            # We record failing, unknown, and blocking flags into audit_flags
-            # Also keep informative record of flags for portal
+            rec_id = r.evidence.get("record_id")
             flag = AuditFlag(
                 flag_id=generate_uuid(),
                 audit_run_id=audit_run.audit_run_id,
                 rule_id=r.rule_id,
+                record_id=str(rec_id) if rec_id else None,
                 rule_version=r.rule_version,
                 outcome=r.status.value,
                 severity=r.severity.value,
@@ -262,6 +272,7 @@ class AuditEngine:
                 {
                     "flag_id": f.flag_id,
                     "rule_id": f.rule_id,
+                    "record_id": f.record_id,
                     "rule_version": f.rule_version,
                     "status": f.outcome,
                     "severity": f.severity,
@@ -272,4 +283,85 @@ class AuditEngine:
                 }
                 for f in persisted_flags
             ],
+        }
+
+    def evaluate_all_employees(
+        self,
+        db: Session,
+        period: Optional[str] = None,
+        trigger_source: str = "batch_evaluation",
+    ) -> Dict[str, Any]:
+        """
+        Executes audit evaluation across all employees for specified or detected periods.
+        Logs an immutable hash-chained audit event into the ledger.
+        """
+        from sqlalchemy import distinct, func
+        # 1. Determine target periods
+        periods = set()
+        if period:
+            periods.add(period)
+        else:
+            # Detect periods from operational tables
+            for row in db.query(distinct(func.strftime("%Y-%m", Attendance.work_date))).all():
+                if row[0]:
+                    periods.add(row[0])
+            for row in db.query(distinct(func.strftime("%Y-%m", Timesheet.work_date))).all():
+                if row[0]:
+                    periods.add(row[0])
+            for row in db.query(distinct(func.strftime("%Y-%m", ExpenseClaim.claim_date))).all():
+                if row[0]:
+                    periods.add(row[0])
+            if not periods:
+                periods.add("2026-10")
+
+        # 2. Find all employees
+        employees = db.query(Employee).all()
+        total_blocking = 0
+        total_warning = 0
+        total_runs = 0
+        sorted_periods = sorted(list(periods))
+
+        for p in sorted_periods:
+            for emp in employees:
+                res = self.run_audit(
+                    db=db,
+                    employee_id=emp.employee_id,
+                    period=p,
+                    trigger_source=trigger_source,
+                )
+                total_blocking += res.get("blocking_count", 0)
+                total_warning += res.get("warning_count", 0)
+                total_runs += 1
+
+        # 3. Write immutable audit ledger event
+        run_batch_id = generate_uuid()
+        try:
+            db.add(AuditEvent(
+                organization_id="ORG_DEMO_01",
+                actor_id="system",
+                actor_role="system",
+                action_type="EVALUATION_RUN",
+                target_entity="audit_runs",
+                target_id=run_batch_id,
+                payload_diff={
+                    "run_batch_id": run_batch_id,
+                    "periods": sorted_periods,
+                    "total_employees": len(employees),
+                    "total_runs": total_runs,
+                    "total_blocking": total_blocking,
+                    "total_warning": total_warning,
+                    "trigger_source": trigger_source,
+                }
+            ))
+            db.commit()
+        except Exception as audit_err:
+            db.rollback()
+
+        return {
+            "run_batch_id": run_batch_id,
+            "periods": sorted_periods,
+            "total_employees": len(employees),
+            "total_runs": total_runs,
+            "total_blocking": total_blocking,
+            "total_warning": total_warning,
         }

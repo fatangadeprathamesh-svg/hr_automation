@@ -591,46 +591,6 @@ export function resetFlagsDemo() {
 // -------------------------------------------------------------
 
 export async function fetchReadiness(period = "2026-10") {
-  if (USE_MOCK) {
-    await new Promise((r) => setTimeout(r, 200));
-    const blockingCount = mockFlagsState.filter((f) => f.severity === "BLOCKING" && f.status !== "Resolved").length;
-    const warningCount = mockFlagsState.filter((f) => f.severity === "WARNING" && f.status !== "Resolved").length;
-    const resolvedCount = mockFlagsState.filter((f) => f.status === "Resolved").length;
-    
-    // Starting score is 78% when 2 blockers open; animates to 100% when 0 blockers
-    let readiness = 78;
-    if (blockingCount === 0) {
-      readiness = 100;
-    } else if (blockingCount === 1) {
-      readiness = 89;
-    }
-
-    return {
-      period,
-      employee_id: currentPersona.id,
-      readiness_percentage: readiness,
-      blocking_count: blockingCount,
-      warning_count: warningCount,
-      resolved_count: resolvedCount,
-      can_submit: blockingCount === 0,
-      feed_status: "COMPLETE",
-      flags: [...mockFlagsState],
-      trend_history: [
-        { month: "May", score: 92, target: 95 },
-        { month: "Jun", score: 88, target: 95 },
-        { month: "Jul", score: 96, target: 95 },
-        { month: "Aug", score: 82, target: 95 },
-        { month: "Sep", score: 94, target: 95 },
-        { month: "Oct", score: readiness, target: 95 },
-      ],
-      issues_by_type: [
-        { type: "Missing Punch", count: mockFlagsState.filter(f => f.rule_id === "missing_punch" && f.status !== "Resolved").length },
-        { type: "Hours Mismatch", count: mockFlagsState.filter(f => f.rule_id === "hours_mismatch" && f.status !== "Resolved").length },
-        { type: "Missing Receipt", count: mockFlagsState.filter(f => f.rule_id === "missing_receipt" && f.status !== "Resolved").length },
-      ],
-    };
-  }
-
   try {
     const res = await fetch(`${API_BASE}/employees/me/readiness?period=${period}`, {
       headers: getAuthHeaders(),
@@ -638,58 +598,110 @@ export async function fetchReadiness(period = "2026-10") {
     });
     if (res.ok) {
       const data = await res.json();
+      if (data.is_linked === false) {
+        return {
+          is_linked: false,
+          has_data: false,
+          has_evaluated: false,
+          message: data.message || "Your account is not linked to an employee record yet. Import the master CSV or ask HR.",
+          period: data.period || period,
+          readiness_percentage: null,
+          blocking_count: 0,
+          warning_count: 0,
+          resolved_count: 0,
+          can_submit: false,
+          feed_status: "EMPTY",
+          flags: [],
+          trend_history: [],
+          issues_by_type: [],
+        };
+      }
+
+      if (data.has_data === false) {
+        return {
+          is_linked: true,
+          has_data: false,
+          has_evaluated: false,
+          employee_id: data.employee_id,
+          employee_name: data.employee_name,
+          message: data.message || "No imported records found for your account.",
+          period: data.period || period,
+          readiness_percentage: null,
+          blocking_count: 0,
+          warning_count: 0,
+          resolved_count: 0,
+          can_submit: false,
+          feed_status: "EMPTY",
+          flags: [],
+          trend_history: [],
+          issues_by_type: [],
+        };
+      }
+
       const allFlags = (data.blocking_issues || []).concat(data.warnings || []);
-      const score = Math.round(data.readiness_score !== undefined ? data.readiness_score : 100);
+      const score = data.readiness_score !== null && data.readiness_score !== undefined
+        ? Math.round(data.readiness_score)
+        : null;
+
+      const issuesByType = (data.category_breakdown || []).map(cb => ({
+        type: cb.category,
+        count: cb.count,
+      }));
+
+      const trendHistory = (data.trend_history || []).map(th => ({
+        month: th.month,
+        score: th.readiness,
+        blockers: th.blockers,
+        warnings: th.warnings,
+      }));
+
       return {
+        is_linked: true,
+        has_data: true,
+        has_evaluated: Boolean(data.has_evaluated),
         period: data.period,
         employee_id: data.employee_id,
+        employee_name: data.employee_name,
         readiness_percentage: score,
         blocking_count: data.blocking_count || 0,
         warning_count: data.warning_count || 0,
         resolved_count: data.resolved_count || 0,
         can_submit: Boolean(data.submission_allowed),
-        feed_status: data.data_health === "complete" ? "COMPLETE" : "EMPTY",
+        feed_status: data.data_health === "complete" ? "COMPLETE" : "INCOMPLETE",
         flags: allFlags.map(f => ({
           id: f.flag_id,
           rule_id: f.rule_id,
           rule_name: (f.rule_id || 'issue').replace(/_/g, ' '),
           severity: (f.severity || 'warning').toUpperCase(),
           status: f.severity === 'blocking' ? 'Open' : 'Warning',
-          date: f.evidence?.work_date || '',
+          date: f.evidence?.work_date || f.evidence?.conflict_date || f.evidence?.claim_date || '',
           title: (f.rule_id || 'issue').replace(/_/g, ' '),
           description: f.suggested_action || f.rule_id || '',
           evidence: JSON.stringify(f.evidence || {}),
           record_version: 1,
           policy_version: f.policy_version,
         })),
-        trend_history: [
-          { month: "May", score: 100, target: 95 },
-          { month: "Jun", score: 100, target: 95 },
-          { month: "Jul", score: 100, target: 95 },
-          { month: "Aug", score: 100, target: 95 },
-          { month: "Sep", score: 100, target: 95 },
-          { month: "Oct", score: score, target: 95 },
-        ],
-        issues_by_type: [
-          { type: "Missing Punch", count: allFlags.filter(f => f.rule_id?.toLowerCase().includes("punch")).length },
-          { type: "Hours Mismatch", count: allFlags.filter(f => f.rule_id?.toLowerCase().includes("hour")).length },
-          { type: "Missing Receipt", count: allFlags.filter(f => f.rule_id?.toLowerCase().includes("receipt")).length },
-        ],
+        trend_history: trendHistory,
+        issues_by_type: issuesByType,
       };
     }
   } catch (e) {
     console.warn("Backend API offline or error loading readiness:", e);
   }
 
-  // Authentic empty state when no data exists or API is unreachable
+  // Authentic empty unlinked state when API is unreachable or error occurs
   return {
+    is_linked: false,
+    has_data: false,
+    has_evaluated: false,
+    message: "Cannot reach server or account is not linked to an employee record yet.",
     period,
-    employee_id: currentPersona.id,
-    readiness_percentage: 100,
+    employee_id: currentPersona?.id || null,
+    readiness_percentage: null,
     blocking_count: 0,
     warning_count: 0,
     resolved_count: 0,
-    can_submit: true,
+    can_submit: false,
     feed_status: "EMPTY",
     flags: [],
     trend_history: [],
@@ -1192,6 +1204,21 @@ export async function fetchAuditLog() {
 
 export async function verifyLedgerIntegrity() {
   return apiFetch('/api/audit-events/verify-integrity');
+}
+
+export async function rerunAudit(period = null) {
+  const q = period ? `?period=${encodeURIComponent(period)}` : '';
+  return apiFetch(`/api/audit/re-run${q}`, {
+    method: 'POST',
+  });
+}
+
+export async function fetchAuditPeriods() {
+  try {
+    return await apiFetch('/api/audit/periods');
+  } catch (e) {
+    return { periods: ['2026-10'], default_period: '2026-10' };
+  }
 }
 
 export async function resetAllDataApi() {

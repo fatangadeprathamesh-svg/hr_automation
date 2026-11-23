@@ -227,6 +227,18 @@ def verify_otp(
 
     user = AuthService.verify_otp(db, auth_email, req.code)
 
+    # Match user's email to employee profile
+    emp = db.query(Employee).filter(
+        or_(
+            Employee.email == user.email,
+            Employee.email == user.email.replace("@example.com", "@company.com"),
+            Employee.email == user.email.replace("@company.com", "@example.com"),
+        )
+    ).first()
+    if emp and user.employee_id != emp.employee_id:
+        user.employee_id = emp.employee_id
+        db.commit()
+
     # Generate JWT token
     token_claims = {
         "sub": user.employee_id,

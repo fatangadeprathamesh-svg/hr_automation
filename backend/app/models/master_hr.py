@@ -102,6 +102,14 @@ class MasterHRRecord(Base):
     desired_salary = Column(Float, nullable=True)
     country = Column(String(64), nullable=True)
 
+    # 6 Optional Columns (backward compatible)
+    email = Column(String(255), nullable=True, index=True)
+    project_code = Column(String(64), nullable=True)
+    amount = Column(Float, nullable=True)
+    expense_category = Column(String(128), nullable=True)
+    receipt_attached = Column(String(8), nullable=True)
+    overtime_approved = Column(String(8), nullable=True)
+
     __table_args__ = (
         Index("ix_master_hr_rec_type_dept", "record_type", "department"),
         Index("ix_master_hr_emp_event", "employee_id", "event_date"),

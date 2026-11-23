@@ -1,12 +1,9 @@
 from typing import Dict, Any, List
 from app.rules.base import BaseRule, RuleResult, RuleOutcome, RuleSeverity
 
-PENDING_STATES = {"pending", "pending_review", "submitted", "in_review"}
-FINAL_STATES = {"approved", "rejected", "withdrawn", "cancelled", "waived"}
-
 
 class PendingApprovalsRule(BaseRule):
-    rule_id = "PENDING_APPROVALS"
+    rule_id = "PENDING_APPROVAL"
     rule_version = "1.0"
 
     def evaluate(
@@ -15,92 +12,130 @@ class PendingApprovalsRule(BaseRule):
         policy_config: Dict[str, Any],
         policy_version: str,
     ) -> List[RuleResult]:
+        """
+        PENDING_APPROVAL:
+        1. Timesheet with status Unapproved or pending.
+        2. Corrections in pending_review.
+        3. Expense claims in pending.
+        4. Missing approval state -> UNKNOWN data health issue.
+        """
         results: List[RuleResult] = []
-
         timesheets = context.get("timesheets", [])
-        expenses = context.get("expense_claims", [])
-        leaves = context.get("leave", [])
         corrections = context.get("corrections", [])
+        expense_claims = context.get("expense_claims", [])
 
-        total_records = len(timesheets) + len(expenses) + len(leaves) + len(corrections)
-        if total_records == 0:
+        if not timesheets and not corrections and not expense_claims:
             results.append(
                 RuleResult(
                     rule_id=self.rule_id,
                     rule_version=self.rule_version,
                     status=RuleOutcome.NOT_APPLICABLE,
                     severity=RuleSeverity.INFO,
-                    evidence={"message": "No items subject to manager approval found for this period."},
+                    evidence={"message": "No pending approval records found for this period."},
                     policy_version=policy_version,
                     suggested_action=None,
                 )
             )
             return results
 
-        # Process each category
-        items_to_check = [
-            ("timesheet", timesheets, "approval_state"),
-            ("expense_claim", expenses, "approval_state"),
-            ("leave", leaves, "approval_state"),
-            ("correction", corrections, "status"),
-        ]
+        has_flag = False
+        decided_count = 0
 
-        pending_items_count = 0
-        final_items_count = 0
+        for ts in timesheets:
+            record_id = getattr(ts, "source_record_id", None) or getattr(ts, "id", "UNKNOWN")
+            raw_status = getattr(ts, "status", None)
+            raw_appr = getattr(ts, "approval_state", None)
 
-        for item_type, records, state_field in items_to_check:
-            for rec in records:
-                record_id = getattr(rec, "source_record_id", None) or getattr(rec, "id", None) or getattr(rec, "correction_id", "UNKNOWN")
-                raw_state = getattr(rec, state_field, None)
-
-                # Data health check for missing state
-                if raw_state is None or not str(raw_state).strip():
-                    results.append(
-                        RuleResult(
-                            rule_id=self.rule_id,
-                            rule_version=self.rule_version,
-                            status=RuleOutcome.UNKNOWN,
-                            severity=RuleSeverity.WARNING,
-                            evidence={
-                                "record_id": record_id,
-                                "entity_type": item_type,
-                                "error": "MISSING_APPROVAL_STATE",
-                            },
-                            policy_version=policy_version,
-                            suggested_action=f"Investigate {item_type} record with undefined approval state.",
-                            is_data_health_issue=True,
-                        )
+            # Data health check: completely missing approval state
+            if raw_status is None and raw_appr is None:
+                has_flag = True
+                results.append(
+                    RuleResult(
+                        rule_id=self.rule_id,
+                        rule_version=self.rule_version,
+                        status=RuleOutcome.UNKNOWN,
+                        severity=RuleSeverity.WARNING,
+                        evidence={
+                            "record_id": record_id,
+                            "message": "Missing approval state on timesheet record.",
+                        },
+                        is_data_health_issue=True,
+                        policy_version=policy_version,
+                        suggested_action="Data health issue: timesheet record lacks approval status.",
                     )
-                    continue
+                )
+                continue
 
-                state_val = str(raw_state).strip().lower()
+            status_val = (raw_status or raw_appr or "").strip()
 
-                if state_val in PENDING_STATES:
-                    pending_items_count += 1
-                    results.append(
-                        RuleResult(
-                            rule_id=self.rule_id,
-                            rule_version=self.rule_version,
-                            status=RuleOutcome.FAIL,
-                            severity=RuleSeverity.BLOCKING,
-                            evidence={
-                                "record_id": record_id,
-                                "entity_type": item_type,
-                                "entity_id": getattr(rec, "id", None) or getattr(rec, "correction_id", None),
-                                "status": state_val,
-                            },
-                            policy_version=policy_version,
-                            suggested_action=(
-                                f"Awaiting manager decision on {item_type} ({record_id}). "
-                                f"All pending approvals must be decided before month-end submission."
-                            ),
-                        )
+            if status_val.lower() in ("unapproved", "pending", "pending_review"):
+                has_flag = True
+                results.append(
+                    RuleResult(
+                        rule_id=self.rule_id,
+                        rule_version=self.rule_version,
+                        status=RuleOutcome.FAIL,
+                        severity=RuleSeverity.BLOCKING,
+                        evidence={
+                            "record_id": record_id,
+                            "work_date": str(ts.work_date) if hasattr(ts, "work_date") else None,
+                            "status": status_val,
+                            "type": "timesheet",
+                        },
+                        policy_version=policy_version,
+                        suggested_action=f"Timesheet {record_id} is Unapproved; manager sign-off required.",
                     )
-                else:
-                    final_items_count += 1
+                )
+            else:
+                decided_count += 1
 
-        # If no pending items were found and no health errors were emitted, emit PASS
-        if pending_items_count == 0 and len(results) == 0:
+        for corr in corrections:
+            corr_id = getattr(corr, "correction_id", None) or getattr(corr, "id", "UNKNOWN")
+            c_status = (getattr(corr, "status", "") or "").strip()
+            if c_status.lower() in ("pending", "pending_review"):
+                has_flag = True
+                results.append(
+                    RuleResult(
+                        rule_id=self.rule_id,
+                        rule_version=self.rule_version,
+                        status=RuleOutcome.FAIL,
+                        severity=RuleSeverity.BLOCKING,
+                        evidence={
+                            "record_id": corr_id,
+                            "status": c_status,
+                            "type": "correction",
+                        },
+                        policy_version=policy_version,
+                        suggested_action=f"Correction {corr_id} is pending review.",
+                    )
+                )
+            elif c_status:
+                decided_count += 1
+
+        for exp in expense_claims:
+            exp_id = getattr(exp, "source_record_id", None) or getattr(exp, "id", "UNKNOWN")
+            e_status = (getattr(exp, "approval_state", "") or "").strip()
+            if e_status.lower() in ("pending", "pending_review", "unapproved"):
+                has_flag = True
+                results.append(
+                    RuleResult(
+                        rule_id=self.rule_id,
+                        rule_version=self.rule_version,
+                        status=RuleOutcome.FAIL,
+                        severity=RuleSeverity.BLOCKING,
+                        evidence={
+                            "record_id": exp_id,
+                            "status": e_status,
+                            "type": "expense",
+                        },
+                        policy_version=policy_version,
+                        suggested_action=f"Expense {exp_id} is pending approval.",
+                    )
+                )
+            elif e_status:
+                decided_count += 1
+
+        if not has_flag:
             results.append(
                 RuleResult(
                     rule_id=self.rule_id,
@@ -108,8 +143,8 @@ class PendingApprovalsRule(BaseRule):
                     status=RuleOutcome.PASS,
                     severity=RuleSeverity.INFO,
                     evidence={
-                        "message": "All timesheets, expenses, leave, and corrections have been resolved.",
-                        "decided_records_count": final_items_count,
+                        "message": "All timesheets, expenses, and corrections are approved.",
+                        "decided_records_count": decided_count,
                     },
                     policy_version=policy_version,
                 )

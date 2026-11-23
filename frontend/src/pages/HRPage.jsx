@@ -5,6 +5,8 @@ import {
   decideSubmission,
   createExportPack,
   fetchHrAiSummary,
+  rerunAudit,
+  fetchAuditPeriods,
 } from '../api';
 import GlassCard from '../components/common/GlassCard';
 import StatsCard from '../components/common/StatsCard';
@@ -45,6 +47,8 @@ import {
 
 export default function HRPage() {
   const [selectedMonth, setSelectedMonth] = useState('2026-10');
+  const [availableMonths, setAvailableMonths] = useState(['2026-10', '2026-09', '2026-08']);
+  const [isRerunning, setIsRerunning] = useState(false);
   const [metrics, setMetrics] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,6 +68,17 @@ export default function HRPage() {
   // Phase 9: AI Executive Briefing state
   const [aiSummary, setAiSummary] = useState(null);
   const [isAiSummaryLoading, setIsAiSummaryLoading] = useState(false);
+
+  useEffect(() => {
+    fetchAuditPeriods().then((res) => {
+      if (res?.periods?.length) {
+        setAvailableMonths(res.periods);
+        if (!res.periods.includes(selectedMonth)) {
+          setSelectedMonth(res.current_period || res.periods[0]);
+        }
+      }
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     loadData(selectedMonth);
@@ -141,13 +156,27 @@ export default function HRPage() {
     }
   }
 
+  async function handleRerunAudit() {
+    setIsRerunning(true);
+    setError(null);
+    try {
+      const res = await rerunAudit(selectedMonth);
+      setSuccessMsg(`Audit re-evaluated successfully! Processed ${res.employees_evaluated ?? 0} employees across ${res.total_flags ?? 0} findings.`);
+      await loadData(selectedMonth);
+    } catch (err) {
+      setError(err.message || 'Failed to re-run audit evaluation.');
+    } finally {
+      setIsRerunning(false);
+    }
+  }
+
   if (loading && !metrics) {
     return <SkeletonLoader rows={6} />;
   }
 
   const donutData = metrics?.submission_donut || [
-    { name: 'Submitted', value: 24, fill: 'var(--status-success)' },
-    { name: 'Pending', value: 6, fill: 'var(--accent)' },
+    { name: 'Submitted', value: metrics?.submitted_count ?? 0, fill: 'var(--status-success)' },
+    { name: 'Pending', value: metrics?.pending_count ?? 0, fill: 'var(--accent)' },
   ];
 
   const issuesByRule = metrics?.issues_by_rule || [];
@@ -169,7 +198,7 @@ export default function HRPage() {
         </div>
       )}
 
-      {/* Header with Month Selector Dropdown */}
+      {/* Header with Month Selector Dropdown & Re-run Audit */}
       <div className="glass-panel rounded-2xl px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-white">
@@ -180,22 +209,37 @@ export default function HRPage() {
           </p>
         </div>
 
-        {/* Month Selector */}
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-[var(--accent-text)]" />
-          <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-            Audit Month:
-          </span>
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-xs font-bold text-slate-800 dark:text-white focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
-            aria-label="Select audit cycle month"
+        {/* Month Selector & Re-run Audit Button */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-[var(--accent-text)]" />
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              Audit Month:
+            </span>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-xs font-bold text-slate-800 dark:text-white focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
+              aria-label="Select audit cycle month"
+            >
+              {availableMonths.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleRerunAudit}
+            disabled={isRerunning || loading}
+            className="px-3 py-1.5 rounded-xl border border-[var(--accent-border-subtle)] bg-[var(--accent)] text-[var(--accent-ink)] hover:opacity-90 text-xs font-bold flex items-center gap-1.5 transition disabled:opacity-50"
+            title="Re-run deterministic rules engine on current data"
           >
-            <option value="2026-10">October 2026 (Active Close)</option>
-            <option value="2026-09">September 2026 (Archived)</option>
-            <option value="2026-08">August 2026 (Archived)</option>
-          </select>
+            <RotateCcw className={`w-3.5 h-3.5 ${isRerunning ? 'animate-spin' : ''}`} />
+            <span>{isRerunning ? 'Auditing...' : 'Re-run Audit'}</span>
+          </button>
         </div>
       </div>
 
@@ -280,28 +324,28 @@ export default function HRPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           title="Submitted vs Pending"
-          value={`${metrics?.submitted_count || 24} / ${metrics?.total_employees || 30}`}
-          subtitle="80.0% completion rate"
+          value={`${metrics?.submitted_count ?? 0} / ${metrics?.total_employees ?? 0}`}
+          subtitle={metrics?.total_employees ? `${((metrics.submitted_count / metrics.total_employees) * 100).toFixed(1)}% completion rate` : '0.0% completion rate'}
           icon={ShieldCheck}
           color="green"
         />
         <StatsCard
           title="Open Blockers"
-          value={metrics?.open_blockers || 4}
-          subtitle="Across 30 active employees"
+          value={metrics?.open_blockers ?? 0}
+          subtitle={`Across ${metrics?.total_employees ?? 0} active employees`}
           icon={AlertTriangle}
           color={metrics?.open_blockers > 0 ? 'red' : 'green'}
         />
         <StatsCard
           title="Average Readiness"
-          value={`${metrics?.average_readiness || 91.2}%`}
+          value={`${metrics?.average_readiness !== undefined ? metrics.average_readiness : 0}%`}
           subtitle="Goal: above 95.0%"
           icon={Clock}
           color="accent"
         />
         <StatsCard
           title="Avg Time to Resolve"
-          value={`${metrics?.average_resolve_days || 1.8} Days`}
+          value={`${metrics?.average_resolve_days !== undefined ? metrics.average_resolve_days : 0} Days`}
           subtitle="Policy SLA: under 2.5 days"
           icon={FileText}
           color="blue"
@@ -319,7 +363,7 @@ export default function HRPage() {
                 <span>Submission Progress</span>
               </h3>
               <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                {Math.round(((metrics?.submitted_count || 24) / (metrics?.total_employees || 30)) * 100)}%
+                {metrics?.total_employees ? Math.round(((metrics.submitted_count || 0) / metrics.total_employees) * 100) : 0}%
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
@@ -357,14 +401,14 @@ export default function HRPage() {
             {/* Center label */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-8">
               <span className="text-xl font-extrabold text-slate-800 dark:text-white">
-                {metrics?.submitted_count || 24}/{metrics?.total_employees || 30}
+                {metrics?.submitted_count ?? 0}/{metrics?.total_employees ?? 0}
               </span>
               <span className="text-[10px] text-slate-400 uppercase font-semibold">Closed</span>
             </div>
           </div>
 
           <div className="mt-2 pt-3 border-t border-slate-200/50 dark:border-slate-700/50 text-[11px] text-slate-500 dark:text-slate-400">
-            <strong>Summary:</strong> {metrics?.submitted_count || 24} of {metrics?.total_employees || 30} records have met the submission gate; {metrics?.pending_count || 6} draft records require resolution.
+            <strong>Summary:</strong> {metrics?.submitted_count ?? 0} of {metrics?.total_employees ?? 0} records have met the submission gate; {metrics?.pending_count ?? 0} draft records require resolution.
           </div>
         </GlassCard>
 
@@ -414,7 +458,7 @@ export default function HRPage() {
           </div>
 
           <div className="mt-2 pt-3 border-t border-slate-200/50 dark:border-slate-700/50 text-[11px] text-slate-500 dark:text-slate-400">
-            <strong>Summary:</strong> Missing punches and timesheet hour discrepancies represent the primary sources of payroll blocking flags.
+            <strong>Summary:</strong> {issuesByRule.reduce((sum, r) => sum + (r.blockers || 0), 0)} blockers and {issuesByRule.reduce((sum, r) => sum + (r.warnings || 0), 0)} warnings detected across policy rules for {selectedMonth}.
           </div>
         </GlassCard>
       </div>
@@ -427,7 +471,7 @@ export default function HRPage() {
             <span>Top 5 Recurring Policy Exceptions ({selectedMonth})</span>
           </h3>
           <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-            Aggregated across 30 employees
+            Aggregated across {metrics?.total_employees ?? 0} employees
           </span>
         </div>
 

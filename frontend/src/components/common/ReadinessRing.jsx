@@ -2,12 +2,18 @@ import React, { useEffect, useState } from 'react';
 
 /**
  * Animated ReadinessRing component with glassmorphic backing.
- * Animates smoothly as issues are fixed (e.g., 78% to 100%).
+ * Dynamically updates as real audit findings are resolved.
  */
-export default function ReadinessRing({ percentage = 78, size = 180, strokeWidth = 14, label = 'Audit Readiness' }) {
+export default function ReadinessRing({ percentage = null, size = 180, strokeWidth = 14, label = 'Audit Readiness' }) {
   const [animatedValue, setAnimatedValue] = useState(0);
 
+  const isNumeric = percentage !== null && percentage !== undefined && !isNaN(percentage);
+
   useEffect(() => {
+    if (!isNumeric) {
+      setAnimatedValue(0);
+      return;
+    }
     // Smooth number animation
     let start = 0;
     const duration = 800;
@@ -26,14 +32,20 @@ export default function ReadinessRing({ percentage = 78, size = 180, strokeWidth
     }, stepTime);
 
     return () => clearInterval(timer);
-  }, [percentage]);
+  }, [percentage, isNumeric]);
 
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (animatedValue / 100) * circumference;
+  const strokeDashoffset = isNumeric ? circumference - (animatedValue / 100) * circumference : circumference;
 
-  // Status color: Status Success when 100% complete, Accent Gold when in progress, Status Warning when low
-  const strokeColor = percentage === 100 ? 'var(--status-success)' : percentage >= 80 ? 'var(--accent)' : 'var(--status-warning)';
+  // Status color: Status Success when 100% complete, Accent when in progress, Status Warning when low
+  const strokeColor = !isNumeric
+    ? 'rgba(148, 163, 184, 0.3)'
+    : percentage === 100
+    ? 'var(--status-success)'
+    : percentage >= 80
+    ? 'var(--accent)'
+    : 'var(--status-warning)';
 
   return (
     <div className="relative inline-flex flex-col items-center justify-center p-4">
@@ -71,10 +83,10 @@ export default function ReadinessRing({ percentage = 78, size = 180, strokeWidth
         {/* Center label inside ring */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
           <span className="text-3xl font-extrabold text-slate-800 dark:text-white tracking-tight">
-            {animatedValue}%
+            {isNumeric ? `${animatedValue}%` : '--'}
           </span>
           <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-0.5">
-            {percentage === 100 ? 'Ready to Submit' : 'Needs Review'}
+            {!isNumeric ? 'Not Evaluated' : percentage === 100 ? 'Ready to Submit' : 'Needs Review'}
           </span>
         </div>
       </div>

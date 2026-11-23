@@ -7,11 +7,11 @@ class MissingReceiptRule(BaseRule):
     rule_version = "1.0"
 
     def evaluate(self, context: Dict[str, Any], policy_config: Dict[str, Any], policy_version: str) -> List[RuleResult]:
+        """
+        MISSING_RECEIPT: expense amount >= threshold (default 25.0) and receipt_attached = N or missing receipt.
+        """
         results: List[RuleResult] = []
         claims = context.get("expense_claims", [])
-
-        # Policy threshold (default $25.00)
-        threshold = float(policy_config.get("missing_receipt", {}).get("receipt_required_threshold", 25.0))
 
         if not claims:
             results.append(
@@ -27,11 +27,16 @@ class MissingReceiptRule(BaseRule):
             )
             return results
 
+        cfg = policy_config.get("missing_receipt", {})
+        threshold = float(cfg.get("receipt_required_threshold", 25.0))
+
         for claim in claims:
             amount = float(claim.amount or 0.0)
-            receipt_ref = claim.receipt_reference
-            claim_id = claim.source_record_id
+            claim_id = getattr(claim, "source_record_id", None) or getattr(claim, "id", "UNKNOWN")
+            receipt_attached = (getattr(claim, "receipt_attached", "") or "").strip().upper()
+            receipt_ref = (getattr(claim, "receipt_reference", "") or "").strip()
 
+            # Corrupted negative amount indicates data health issue
             if amount < 0:
                 results.append(
                     RuleResult(
@@ -42,17 +47,37 @@ class MissingReceiptRule(BaseRule):
                         evidence={
                             "record_id": claim_id,
                             "amount": amount,
-                            "data_health_issue": "NEGATIVE_EXPENSE_AMOUNT",
+                            "message": f"Negative claim amount (${amount:.2f}) indicates corrupted upstream data.",
                         },
-                        policy_version=policy_version,
-                        suggested_action="Investigate corrupted negative expense claim.",
                         is_data_health_issue=True,
+                        policy_version=policy_version,
+                        suggested_action="Data health issue: upstream expense system record is corrupted.",
                     )
                 )
                 continue
 
+            has_receipt = (receipt_attached in ("Y", "YES", "1", "TRUE")) or (bool(receipt_ref) and receipt_attached not in ("N", "NO", "0", "FALSE"))
+
             if amount >= threshold:
-                if receipt_ref and str(receipt_ref).strip():
+                if not has_receipt or receipt_attached in ("N", "NO", "0", "FALSE"):
+                    results.append(
+                        RuleResult(
+                            rule_id=self.rule_id,
+                            rule_version=self.rule_version,
+                            status=RuleOutcome.FAIL,
+                            severity=RuleSeverity.BLOCKING,
+                            evidence={
+                                "record_id": claim_id,
+                                "amount": amount,
+                                "currency": getattr(claim, "currency", "USD"),
+                                "category": getattr(claim, "category", ""),
+                                "receipt_attached": receipt_attached or "N",
+                            },
+                            policy_version=policy_version,
+                            suggested_action=f"Upload receipt document: Claim of USD {amount:.2f} requires a receipt (threshold: {threshold:.2f}).",
+                        )
+                    )
+                else:
                     results.append(
                         RuleResult(
                             rule_id=self.rule_id,
@@ -62,35 +87,12 @@ class MissingReceiptRule(BaseRule):
                             evidence={
                                 "record_id": claim_id,
                                 "amount": amount,
-                                "currency": claim.currency,
-                                "category": claim.category,
-                                "receipt_reference": str(receipt_ref),
+                                "receipt_attached": receipt_attached,
                             },
                             policy_version=policy_version,
-                        )
-                    )
-                else:
-                    results.append(
-                        RuleResult(
-                            rule_id=self.rule_id,
-                            rule_version=self.rule_version,
-                            status=RuleOutcome.FAIL,
-                            severity=RuleSeverity.BLOCKING,
-                            evidence={
-                                "record_id": claim_id,
-                                "entity_id": claim.id,
-                                "amount": amount,
-                                "currency": claim.currency,
-                                "category": claim.category,
-                                "threshold": threshold,
-                                "missing": "receipt_reference",
-                            },
-                            policy_version=policy_version,
-                            suggested_action=f"Claim of {claim.currency} {amount:.2f} requires a receipt (threshold: {threshold:.2f}). Upload receipt document.",
                         )
                     )
             else:
-                # Under receipt threshold
                 results.append(
                     RuleResult(
                         rule_id=self.rule_id,
@@ -100,8 +102,7 @@ class MissingReceiptRule(BaseRule):
                         evidence={
                             "record_id": claim_id,
                             "amount": amount,
-                            "threshold": threshold,
-                            "message": f"Receipt not required for claims under {threshold:.2f}.",
+                            "message": f"Amount {amount:.2f} below receipt threshold {threshold:.2f}.",
                         },
                         policy_version=policy_version,
                     )

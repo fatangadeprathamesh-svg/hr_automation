@@ -40,18 +40,19 @@ def test_row_validation_rules():
     assert parsed["monthly_income"] == 8500.0
     assert parsed["dob"] == date(1990, 5, 15)
 
-    # 2. Valid timesheet with NO employee_id (must NOT be rejected)
+    # 2. Valid timesheet
     row_ts = {
         "record_id": "REC-002",
         "record_type": "timesheet",
+        "employee_id": "EMP001",
         "employee_name": "Bob Builder",
         "event_date": "2026-10-01",
         "hours_total": "8.5",
         "status": "approved",
     }
-    parsed, rej = MasterImportService.validate_and_parse_row(row_ts, 3)
+    parsed, rej = MasterImportService.validate_and_parse_row(row_ts, 3, known_emp_ids={"EMP001"})
     assert rej is None
-    assert parsed["employee_id"] is None
+    assert parsed["employee_id"] == "EMP001"
     assert parsed["hours_total"] == 8.5
 
     # 3. Invalid record_type
@@ -71,6 +72,7 @@ def test_row_validation_rules():
         "employee_id": "EMP002",
         "start_date": "2026-10-15",
         "end_date": "2026-10-10",
+        "status": "approved",
         "days": "5.0",
     }
     parsed, rej = MasterImportService.validate_and_parse_row(row_bad_leave, 5)
@@ -81,9 +83,11 @@ def test_row_validation_rules():
     row_bad_hours = {
         "record_id": "REC-005",
         "record_type": "timesheet",
+        "employee_id": "EMP001",
         "employee_name": "David",
         "event_date": "2026-10-02",
         "hours_total": "26.0",
+        "status": "approved",
     }
     parsed, rej = MasterImportService.validate_and_parse_row(row_bad_hours, 6)
     assert parsed is None
@@ -93,6 +97,7 @@ def test_row_validation_rules():
     row_bad_date = {
         "record_id": "REC-006",
         "record_type": "employee_profile",
+        "employee_id": "EMP006",
         "employee_name": "Eva",
         "hire_date": "10/15/2025",
     }
@@ -104,6 +109,7 @@ def test_row_validation_rules():
     row_bad_num = {
         "record_id": "REC-007",
         "record_type": "employee_profile",
+        "employee_id": "EMP007",
         "employee_name": "Frank",
         "monthly_income": "$7,500.00",
     }

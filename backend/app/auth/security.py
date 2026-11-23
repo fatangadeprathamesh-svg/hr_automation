@@ -128,8 +128,27 @@ def get_current_actor(
             actor_id = parts[2]
             role = "_".join(parts[3:])
             emp = db.query(Employee).filter(Employee.employee_id == actor_id).first()
+            if not emp:
+                # Check known persona mappings (e.g. EMP001 -> EMP0001, MGR001 -> EMP0002, etc.)
+                candidate_ids = [actor_id]
+                if actor_id in ("EMP001", "EMP1"):
+                    candidate_ids.extend(["EMP0001", "EMP-001", "EMP-0001"])
+                elif actor_id in ("MGR001", "MGR1"):
+                    candidate_ids.extend(["EMP0002", "MGR0001", "MGR-001"])
+                elif actor_id in ("HR001", "HR1"):
+                    candidate_ids.extend(["EMP0003", "HR0001", "HR-001"])
+                elif actor_id in ("IC001", "IC1"):
+                    candidate_ids.extend(["EMP0004", "IC0001", "IC-001"])
+
+                emp = db.query(Employee).filter(Employee.employee_id.in_(candidate_ids)).first()
+                if not emp:
+                    # Also try matching by persona email
+                    persona_email = f"{actor_id.lower()}@company.com"
+                    emp = db.query(Employee).filter(Employee.email == persona_email).first()
+
+            resolved_id = emp.employee_id if emp else actor_id
             return ActorIdentity(
-                actor_id=actor_id,
+                actor_id=resolved_id,
                 organization_id=settings.ORGANIZATION_ID,
                 role=role,
                 email=emp.email if emp else f"{actor_id.lower()}@example.com",

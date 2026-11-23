@@ -1,5 +1,5 @@
-from decimal import Decimal
-from typing import Dict, Any, List, Set
+from typing import Dict, Any, List
+from collections import defaultdict
 from app.rules.base import BaseRule, RuleResult, RuleOutcome, RuleSeverity
 
 
@@ -13,6 +13,11 @@ class DuplicateClaimRule(BaseRule):
         policy_config: Dict[str, Any],
         policy_version: str,
     ) -> List[RuleResult]:
+        """
+        DUPLICATE_CLAIM:
+        1. Identical receipt_reference across multiple claims.
+        2. Same employee, event_date, expense_category, and amount.
+        """
         results: List[RuleResult] = []
         claims = context.get("expense_claims", [])
 
@@ -30,18 +35,35 @@ class DuplicateClaimRule(BaseRule):
             )
             return results
 
-        config = policy_config.get("duplicate_claim", {})
-        match_receipt_ref = config.get("match_receipt_reference", True)
-        match_date_amount_merchant = config.get("match_date_amount_merchant", True)
+        # Group claims by receipt_reference (if present)
+        receipt_groups = defaultdict(list)
+        # Group claims by (claim_date, category.lower(), amount)
+        content_groups = defaultdict(list)
 
-        valid_claims = []
+        for claim in claims:
+            c_date = getattr(claim, "claim_date", None)
+            c_amt = round(float(getattr(claim, "amount", 0.0) or 0.0), 2)
+            c_cat = (getattr(claim, "category", "") or "").strip().lower()
+            rec_ref = (getattr(claim, "receipt_reference", "") or "").strip()
+
+            content_key = (str(c_date), c_cat, c_amt)
+            content_groups[content_key].append(claim)
+
+            if rec_ref:
+                receipt_groups[rec_ref].append(claim)
+
+        has_duplicate = False
+
         for claim in claims:
             claim_id = getattr(claim, "source_record_id", None) or getattr(claim, "id", "UNKNOWN")
-            amount = getattr(claim, "amount", None)
-            claim_date = getattr(claim, "claim_date", None)
+            c_date = getattr(claim, "claim_date", None)
+            try:
+                c_amt = float(getattr(claim, "amount", 0.0) or 0.0)
+            except (ValueError, TypeError):
+                c_amt = -1.0
 
-            # Data health checks
-            if claim_date is None:
+            # Data health check: negative amount or missing date
+            if c_amt < 0 or c_date is None:
                 results.append(
                     RuleResult(
                         rule_id=self.rule_id,
@@ -50,85 +72,39 @@ class DuplicateClaimRule(BaseRule):
                         severity=RuleSeverity.WARNING,
                         evidence={
                             "record_id": claim_id,
-                            "error": "MISSING_CLAIM_DATE",
+                            "claim_date": str(c_date) if c_date else None,
+                            "amount": c_amt,
+                            "message": "Corrupted expense claim: negative amount or missing claim date.",
                         },
-                        policy_version=policy_version,
-                        suggested_action="Investigate claim with missing claim date.",
                         is_data_health_issue=True,
+                        policy_version=policy_version,
+                        suggested_action="Data health issue: upstream expense system record is corrupted.",
                     )
                 )
                 continue
 
-            if amount is None or float(amount) < 0:
-                results.append(
-                    RuleResult(
-                        rule_id=self.rule_id,
-                        rule_version=self.rule_version,
-                        status=RuleOutcome.UNKNOWN,
-                        severity=RuleSeverity.WARNING,
-                        evidence={
-                            "record_id": claim_id,
-                            "error": "INVALID_OR_NEGATIVE_AMOUNT",
-                            "amount": float(amount) if amount is not None else None,
-                        },
-                        policy_version=policy_version,
-                        suggested_action="Investigate corrupted negative or null expense claim amount.",
-                        is_data_health_issue=True,
-                    )
-                )
-                continue
+            c_amt = round(c_amt, 2)
+            c_cat = (getattr(claim, "category", "") or "").strip().lower()
+            rec_ref = (getattr(claim, "receipt_reference", "") or "").strip()
+            content_key = (str(c_date), c_cat, c_amt)
 
-            valid_claims.append(claim)
+            is_dup = False
+            dup_reason = ""
+            matched_ids = []
 
-        # Detect duplicates among valid claims
-        # A claim is duplicate if another claim shares receipt_reference (non-empty)
-        # OR shares (claim_date, amount, category/merchant)
-        duplicate_ids: Dict[str, List[str]] = {}
-        duplicate_reasons: Dict[str, List[str]] = {}
+            # Check receipt reference collision
+            if rec_ref and len(receipt_groups[rec_ref]) > 1:
+                is_dup = True
+                matched_ids = [getattr(c, "source_record_id", c.id) for c in receipt_groups[rec_ref] if getattr(c, "source_record_id", c.id) != claim_id]
+                dup_reason = f"Duplicate receipt reference '{rec_ref}' attached to multiple claims: {matched_ids}."
+            # Check content collision
+            elif len(content_groups[content_key]) > 1:
+                is_dup = True
+                matched_ids = [getattr(c, "source_record_id", c.id) for c in content_groups[content_key] if getattr(c, "source_record_id", c.id) != claim_id]
+                dup_reason = f"Identical claim details (date: {c_date}, category: {c_cat}, amount: {c_amt}) matched claim {matched_ids}."
 
-        for i, c1 in enumerate(valid_claims):
-            id1 = getattr(c1, "source_record_id", None) or getattr(c1, "id", str(i))
-            amt1 = float(c1.amount)
-            date1 = c1.claim_date
-            cat1 = getattr(c1, "category", "") or ""
-            merch1 = (getattr(c1, "merchant_name", "") or "").strip().lower()
-            rec1 = (getattr(c1, "receipt_reference", "") or "").strip()
-
-            for j, c2 in enumerate(valid_claims):
-                if i == j:
-                    continue
-                id2 = getattr(c2, "source_record_id", None) or getattr(c2, "id", str(j))
-                amt2 = float(c2.amount)
-                date2 = c2.claim_date
-                cat2 = getattr(c2, "category", "") or ""
-                merch2 = (getattr(c2, "merchant_name", "") or "").strip().lower()
-                rec2 = (getattr(c2, "receipt_reference", "") or "").strip()
-
-                is_dup = False
-                reason = ""
-
-                # Check duplicate receipt reference
-                if match_receipt_ref and rec1 and rec2 and rec1.lower() == rec2.lower():
-                    is_dup = True
-                    reason = f"Duplicate receipt reference '{rec1}' matches claim {id2}"
-
-                # Check duplicate date + amount + (merchant or category)
-                if match_date_amount_merchant and not is_dup:
-                    if date1 == date2 and amt1 == amt2:
-                        if merch1 and merch2 and merch1 == merch2:
-                            is_dup = True
-                            reason = f"Duplicate claim on {date1} for {amt1:.2f} at '{merch1}' matches claim {id2}"
-                        elif cat1 and cat2 and cat1.lower() == cat2.lower():
-                            is_dup = True
-                            reason = f"Duplicate claim on {date1} for {amt1:.2f} in category '{cat1}' matches claim {id2}"
-
-                if is_dup:
-                    duplicate_ids.setdefault(id1, []).append(id2)
-                    duplicate_reasons.setdefault(id1, []).append(reason)
-
-        for claim in valid_claims:
-            claim_id = getattr(claim, "source_record_id", None) or getattr(claim, "id", "UNKNOWN")
-            if claim_id in duplicate_ids:
+            if is_dup:
+                has_duplicate = True
                 results.append(
                     RuleResult(
                         rule_id=self.rule_id,
@@ -137,18 +113,15 @@ class DuplicateClaimRule(BaseRule):
                         severity=RuleSeverity.BLOCKING,
                         evidence={
                             "record_id": claim_id,
-                            "entity_id": getattr(claim, "id", None),
-                            "amount": float(claim.amount),
-                            "currency": getattr(claim, "currency", "USD"),
-                            "claim_date": str(claim.claim_date),
-                            "category": claim.category,
-                            "merchant_name": getattr(claim, "merchant_name", None),
-                            "receipt_reference": getattr(claim, "receipt_reference", None),
-                            "duplicate_with": duplicate_ids[claim_id],
-                            "reasons": duplicate_reasons[claim_id],
+                            "claim_date": str(c_date) if c_date else None,
+                            "amount": c_amt,
+                            "category": c_cat,
+                            "receipt_reference": rec_ref,
+                            "duplicate_with": matched_ids,
+                            "reason": dup_reason,
                         },
                         policy_version=policy_version,
-                        suggested_action=f"Duplicate claim detected with {duplicate_ids[claim_id]}. Withdraw duplicate or submit correction with distinct documentation.",
+                        suggested_action=f"Resolve duplicate expense claim: {dup_reason}",
                     )
                 )
             else:
@@ -160,9 +133,8 @@ class DuplicateClaimRule(BaseRule):
                         severity=RuleSeverity.INFO,
                         evidence={
                             "record_id": claim_id,
-                            "amount": float(claim.amount),
-                            "claim_date": str(claim.claim_date),
-                            "category": claim.category,
+                            "claim_date": str(c_date) if c_date else None,
+                            "amount": c_amt,
                         },
                         policy_version=policy_version,
                     )

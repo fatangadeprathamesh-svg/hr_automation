@@ -26,13 +26,14 @@ class Employee(Base):
     email = Column(String(255), nullable=False, unique=True, index=True)
     full_name = Column(String(255), nullable=False)
     manager_id = Column(String(64), ForeignKey("employees.employee_id"), nullable=True)
+    manager = Column(String(255), nullable=True)  # Manager name string from master profile
     timezone = Column(String(64), nullable=False, default="America/New_York")
     hire_date = Column(Date, nullable=False, default=date(2025, 1, 1))
     termination_date = Column(Date, nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), default=func.now(), nullable=False)
 
-    manager = relationship("Employee", remote_side=[employee_id], backref="direct_reports")
+    manager_rel = relationship("Employee", remote_side=[employee_id], foreign_keys=[manager_id], backref="direct_reports")
 
 
 class SourceImport(Base):
@@ -61,6 +62,9 @@ class Attendance(Base, ProvenanceMixin):
     timezone = Column(String(64), nullable=False, default="America/New_York")
     shift_id = Column(String(64), nullable=True)
     approval_state = Column(String(32), nullable=False, default="approved")
+    hours_total = Column(Numeric(5, 2), nullable=True)
+    status = Column(String(64), nullable=True)  # Present, Late, etc.
+    overtime_approved = Column(String(8), nullable=True)  # Y / N
 
     __table_args__ = (
         UniqueConstraint("organization_id", "source_system", "source_record_id", name="uq_attendance_source"),
@@ -92,6 +96,8 @@ class Timesheet(Base, ProvenanceMixin):
     regular_hours = Column(Numeric(5, 2), nullable=False, default=8.0)
     overtime_hours = Column(Numeric(5, 2), nullable=False, default=0.0)
     approval_state = Column(String(32), nullable=False, default="approved")
+    hours_total = Column(Numeric(5, 2), nullable=True)
+    status = Column(String(64), nullable=True)  # Approved, Unapproved, etc.
 
     __table_args__ = (
         UniqueConstraint("organization_id", "source_system", "source_record_id", name="uq_timesheet_source"),
@@ -110,6 +116,7 @@ class ExpenseClaim(Base, ProvenanceMixin):
     receipt_reference = Column(String(512), nullable=True)
     merchant_name = Column(String(255), nullable=True)
     approval_state = Column(String(32), nullable=False, default="pending")
+    receipt_attached = Column(String(8), nullable=True)  # Y / N
 
     __table_args__ = (
         UniqueConstraint("organization_id", "source_system", "source_record_id", name="uq_expense_source"),
@@ -166,6 +173,7 @@ class AuditFlag(Base):
     flag_id = Column(String(36), primary_key=True, default=generate_uuid)
     audit_run_id = Column(String(36), ForeignKey("audit_runs.audit_run_id"), nullable=False, index=True)
     rule_id = Column(String(64), nullable=False, index=True)
+    record_id = Column(String(128), nullable=True, index=True)
     rule_version = Column(String(16), nullable=False, default="1.0")
     outcome = Column(String(32), nullable=False)  # pass, fail, unknown, not_applicable
     severity = Column(String(32), nullable=False)  # blocking, warning, info

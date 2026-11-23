@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   fetchPendingCorrections,
   decideCorrection,
+  fetchAuditPeriods,
 } from '../api';
 import GlassCard from '../components/common/GlassCard';
 import StatsCard from '../components/common/StatsCard';
@@ -36,6 +37,10 @@ export default function ManagerPage() {
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
+  // Month selector
+  const [selectedMonth, setSelectedMonth] = useState('2026-10');
+  const [availableMonths, setAvailableMonths] = useState(['2026-10']);
+
   // Review modal state
   const [selectedItem, setSelectedItem] = useState(null);
   const [decision, setDecision] = useState('approved');
@@ -43,8 +48,23 @@ export default function ManagerPage() {
   const [isDeciding, setIsDeciding] = useState(false);
 
   useEffect(() => {
-    loadData();
+    async function initPeriods() {
+      try {
+        const res = await fetchAuditPeriods();
+        if (res?.periods && res.periods.length > 0) {
+          setAvailableMonths(res.periods);
+          setSelectedMonth(res.default_period || res.periods[0]);
+        }
+      } catch (e) {
+        console.warn('Could not fetch audit periods:', e);
+      }
+    }
+    initPeriods();
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [selectedMonth]);
 
   async function loadData() {
     setLoading(true);
@@ -96,6 +116,37 @@ export default function ManagerPage() {
 
   return (
     <div className="space-y-6">
+      {/* Top Header & Month Selector */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span>Manager Corrections & Approvals</span>
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Review and sign off on timesheet, punch, and expense corrections submitted by your team.
+          </p>
+        </div>
+
+        {/* Audit Month Selector */}
+        <div className="flex items-center gap-2">
+          <label htmlFor="manager-period-select" className="text-xs font-medium text-slate-600 dark:text-slate-300">
+            Audit Month:
+          </label>
+          <select
+            id="manager-period-select"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+          >
+            {availableMonths.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* Notifications */}
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
       {successMsg && (
@@ -181,7 +232,7 @@ export default function ManagerPage() {
         </div>
 
         <div className="mt-3 pt-3 border-t border-slate-200/50 dark:border-slate-700/50 text-[11px] text-slate-500 dark:text-slate-400">
-          <strong>Summary:</strong> Team managers cleared 24 correction requests in October with an average sign-off turnaround of 1.4 days, well under the 2-day policy threshold.
+          <strong>Summary:</strong> {pendingCount} correction request(s) awaiting manager review for {selectedMonth}.
         </div>
       </GlassCard>
 

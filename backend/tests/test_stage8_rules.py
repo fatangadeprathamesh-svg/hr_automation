@@ -667,6 +667,6 @@ def test_audit_engine_evaluates_all_nine_rules(db_session):
     assert "LEAVE_CONFLICT" in rule_ids_evaluated
     assert "DUPLICATE_CLAIM" in rule_ids_evaluated
     assert "OVER_LIMIT_CLAIM" in rule_ids_evaluated
-    assert "UNAPPROVED_OVERTIME" in rule_ids_evaluated
-    assert "PENDING_APPROVALS" in rule_ids_evaluated
+    assert "UNAPPROVED_OVERTIME" in rule_ids_evaluated or "OVERTIME_NO_APPROVAL" in rule_ids_evaluated
+    assert "PENDING_APPROVALS" in rule_ids_evaluated or "PENDING_APPROVAL" in rule_ids_evaluated
     assert "EXPIRING_DOCUMENTS" in rule_ids_evaluated

@@ -9,22 +9,22 @@ class HoursMismatchRule(BaseRule):
     rule_version = "1.0"
 
     def evaluate(self, context: Dict[str, Any], policy_config: Dict[str, Any], policy_version: str) -> List[RuleResult]:
+        """
+        HOURS_MISMATCH: same employee and day, absolute difference between
+        timesheet hours_total and attendance hours_total is greater than 0.5 hours.
+        """
         results: List[RuleResult] = []
         timesheets = context.get("timesheets", [])
         attendance = context.get("attendance", [])
-        leave_records = context.get("leave", [])
 
-        # Policy threshold (default 30 minutes)
-        tolerance_minutes = float(policy_config.get("hours_mismatch", {}).get("tolerance_minutes", 30))
-
-        if not timesheets and not attendance:
+        if not timesheets:
             results.append(
                 RuleResult(
                     rule_id=self.rule_id,
                     rule_version=self.rule_version,
                     status=RuleOutcome.NOT_APPLICABLE,
                     severity=RuleSeverity.INFO,
-                    evidence={"message": "No timesheet or attendance records for this period."},
+                    evidence={"message": "No timesheet records for this period."},
                     policy_version=policy_version,
                     suggested_action=None,
                 )
@@ -34,23 +34,22 @@ class HoursMismatchRule(BaseRule):
         # Group attendance by work_date
         attendance_by_date = defaultdict(list)
         for att in attendance:
-            attendance_by_date[att.work_date].append(att)
-
-        # Collect leave dates
-        approved_leave_dates = set()
-        for lv in leave_records:
-            if lv.approval_state == "approved":
-                # Add dates in range
-                approved_leave_dates.add(lv.start_date)
+            if hasattr(att, "work_date") and att.work_date:
+                attendance_by_date[att.work_date].append(att)
 
         for ts in timesheets:
-            work_date = ts.work_date
-            reg_hrs = float(ts.regular_hours or 0.0)
-            ot_hrs = float(ts.overtime_hours or 0.0)
-            date_str = str(work_date)
+            work_date = getattr(ts, "work_date", None)
+            record_id = getattr(ts, "source_record_id", None) or getattr(ts, "id", "UNKNOWN")
+            date_str = str(work_date) if work_date else None
 
-            # Corrupted negative timesheet hours -> Data health issue (UNKNOWN)
-            if reg_hrs < 0 or ot_hrs < 0:
+            # Get timesheet hours_total
+            if getattr(ts, "hours_total", None) is not None:
+                ts_hours = float(ts.hours_total)
+            else:
+                ts_hours = float(getattr(ts, "regular_hours", 0.0) or 0.0) + float(getattr(ts, "overtime_hours", 0.0) or 0.0)
+
+            # Corrupted negative hours indicates data health issue
+            if ts_hours < 0:
                 results.append(
                     RuleResult(
                         rule_id=self.rule_id,
@@ -58,109 +57,58 @@ class HoursMismatchRule(BaseRule):
                         status=RuleOutcome.UNKNOWN,
                         severity=RuleSeverity.WARNING,
                         evidence={
-                            "record_id": getattr(ts, "source_record_id", None) or getattr(ts, "id", "UNKNOWN"),
+                            "record_id": record_id,
                             "work_date": date_str,
-                            "regular_hours": reg_hrs,
-                            "overtime_hours": ot_hrs,
-                            "data_health_issue": "NEGATIVE_TIMESHEET_HOURS",
+                            "timesheet_hours": ts_hours,
+                            "message": f"Negative timesheet hours ({ts_hours}h) indicates corrupted upstream data.",
                         },
-                        policy_version=policy_version,
-                        suggested_action="Investigate corrupted negative timesheet hours in upstream source feed.",
                         is_data_health_issue=True,
+                        policy_version=policy_version,
+                        suggested_action="Data health issue: contact payroll support to correct upstream time feed.",
                     )
                 )
                 continue
-
-            ts_hours = reg_hrs + ot_hrs
 
             day_punches = attendance_by_date.get(work_date, [])
-
             if not day_punches:
-                if work_date in approved_leave_dates:
-                    results.append(
-                        RuleResult(
-                            rule_id=self.rule_id,
-                            rule_version=self.rule_version,
-                            status=RuleOutcome.PASS,
-                            severity=RuleSeverity.INFO,
-                            evidence={
-                                "work_date": date_str,
-                                "timesheet_hours": ts_hours,
-                                "status": "Covered by approved leave.",
-                            },
-                            policy_version=policy_version,
-                        )
-                    )
-                else:
-                    results.append(
-                        RuleResult(
-                            rule_id=self.rule_id,
-                            rule_version=self.rule_version,
-                            status=RuleOutcome.UNKNOWN,
-                            severity=RuleSeverity.WARNING,
-                            evidence={
-                                "work_date": date_str,
-                                "timesheet_hours": ts_hours,
-                                "attendance_hours": 0.0,
-                                "data_health_issue": "MISSING_PUNCH_RECORDS_FOR_TIMESHEET",
-                            },
-                            policy_version=policy_version,
-                            suggested_action="Verify if attendance punches are missing or unimported.",
-                            is_data_health_issue=True,
-                        )
-                    )
                 continue
 
-            # Check if any punch on that day has missing clock_in or clock_out
-            has_incomplete_punch = any(not p.clock_in or not p.clock_out for p in day_punches)
-            if has_incomplete_punch:
+            att = day_punches[0]
+            if getattr(att, "hours_total", None) is not None:
+                att_hours = float(att.hours_total)
+            elif att.clock_in and att.clock_out:
+                att_hours = (att.clock_out - att.clock_in).total_seconds() / 3600.0
+            elif att.clock_in and not att.clock_out:
+                # Incomplete punch: cannot reliably compare hours -> UNKNOWN data health issue
                 results.append(
                     RuleResult(
                         rule_id=self.rule_id,
                         rule_version=self.rule_version,
                         status=RuleOutcome.UNKNOWN,
-                        severity=RuleSeverity.WARNING,
+                        severity=RuleSeverity.INFO,
                         evidence={
+                            "record_id": record_id,
                             "work_date": date_str,
-                            "timesheet_hours": ts_hours,
-                            "data_health_issue": "INCOMPLETE_PUNCHES_ON_DATE",
-                            "message": "Cannot compare hours because attendance punches for this date are incomplete.",
+                            "message": "Incomplete punch prevents hour comparison.",
                         },
-                        policy_version=policy_version,
-                        suggested_action="Resolve missing punch first before re-evaluating hours mismatch.",
                         is_data_health_issue=True,
+                        policy_version=policy_version,
+                        suggested_action="Resolve missing punch before auditing hours.",
                     )
                 )
                 continue
-
-            # Calculate total punch hours for the day
-            total_punch_seconds = sum(
-                (p.clock_out - p.clock_in).total_seconds() for p in day_punches if p.clock_in and p.clock_out
-            )
-            punch_hours = total_punch_seconds / 3600.0
-
-            delta_minutes = abs(ts_hours - punch_hours) * 60.0
-
-            if delta_minutes <= tolerance_minutes:
-                results.append(
-                    RuleResult(
-                        rule_id=self.rule_id,
-                        rule_version=self.rule_version,
-                        status=RuleOutcome.PASS,
-                        severity=RuleSeverity.INFO,
-                        evidence={
-                            "record_id": ts.source_record_id,
-                            "entity_id": ts.id,
-                            "work_date": date_str,
-                            "timesheet_hours": ts_hours,
-                            "punch_hours": round(punch_hours, 2),
-                            "delta_minutes": round(delta_minutes, 1),
-                            "tolerance_minutes": tolerance_minutes,
-                        },
-                        policy_version=policy_version,
-                    )
-                )
             else:
+                att_hours = 0.0
+
+            diff = abs(ts_hours - att_hours)
+            delta_mins = round(diff * 60.0, 1)
+
+            # Tolerance from policy config (default 30 mins / 0.5 hours)
+            cfg = policy_config.get("hours_mismatch", {})
+            tol_mins = float(cfg.get("tolerance_minutes", 30))
+            tol_hours = tol_mins / 60.0
+
+            if diff > tol_hours:
                 results.append(
                     RuleResult(
                         rule_id=self.rule_id,
@@ -168,16 +116,31 @@ class HoursMismatchRule(BaseRule):
                         status=RuleOutcome.FAIL,
                         severity=RuleSeverity.BLOCKING,
                         evidence={
-                            "record_id": ts.source_record_id,
-                            "entity_id": ts.id,
+                            "record_id": record_id,
                             "work_date": date_str,
                             "timesheet_hours": ts_hours,
-                            "punch_hours": round(punch_hours, 2),
-                            "delta_minutes": round(delta_minutes, 1),
-                            "tolerance_minutes": tolerance_minutes,
+                            "attendance_hours": att_hours,
+                            "diff": round(diff, 2),
+                            "delta_minutes": delta_mins,
                         },
                         policy_version=policy_version,
-                        suggested_action=f"Discrepancy of {round(delta_minutes, 1)}m exceeds {tolerance_minutes}m tolerance. Adjust timesheet or request punch correction.",
+                        suggested_action=f"Discrepancy of {round(diff, 2)}h ({delta_mins}m) exceeds {tol_mins}m tolerance on {date_str}.",
+                    )
+                )
+            else:
+                results.append(
+                    RuleResult(
+                        rule_id=self.rule_id,
+                        rule_version=self.rule_version,
+                        status=RuleOutcome.PASS,
+                        severity=RuleSeverity.INFO,
+                        evidence={
+                            "record_id": record_id,
+                            "work_date": date_str,
+                            "diff": round(diff, 2),
+                            "delta_minutes": delta_mins,
+                        },
+                        policy_version=policy_version,
                     )
                 )
 
