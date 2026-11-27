@@ -11,43 +11,65 @@ export function setUseMock(val) {
 
 // Pre-seeded test personas matching system spec
 export const PERSONAS = {
-  EMP001: {
-    id: "EMP001",
+  EMP0001: {
+    id: "EMP0001",
     name: "Alice Employee",
     email: "alice@company.com",
     role: "employee",
     department: "Engineering",
     avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
   },
-  MGR001: {
-    id: "MGR001",
+  EMP0002: {
+    id: "EMP0002",
     name: "Bob Manager",
     email: "bob@company.com",
     role: "manager",
-    department: "Engineering",
+    department: "Management",
     avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150",
   },
-  HR001: {
-    id: "HR001",
+  EMP0003: {
+    id: "EMP0003",
     name: "Carol HR Admin",
     email: "carol@company.com",
     role: "hr_admin",
     department: "Human Resources",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
   },
-  IC001: {
-    id: "IC001",
+  EMP0004: {
+    id: "EMP0004",
     name: "Irene IC Member",
-    email: "irene.ic@company.com",
+    email: "irene@company.com",
     role: "ic_member",
     department: "Internal Committee",
     avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150",
   },
 };
 
+// Aliases for backward compatibility
+PERSONAS.EMP001 = PERSONAS.EMP0001;
+PERSONAS.MGR001 = PERSONAS.EMP0002;
+PERSONAS.HR001 = PERSONAS.EMP0003;
+PERSONAS.IC001 = PERSONAS.EMP0004;
+
+export function getRoleHome(role) {
+  switch (role) {
+    case "employee":
+      return "/employee";
+    case "manager":
+      return "/manager";
+    case "hr":
+    case "hr_admin":
+      return "/hr";
+    case "ic_member":
+      return "/duties";
+    default:
+      return "/employee";
+  }
+}
+
 // State stored in memory/localStorage for session persistence
-let currentPersona = PERSONAS.EMP001;
-let currentToken = localStorage.getItem("hr_auth_token") || "DEV_TOKEN_EMP001_employee";
+let currentPersona = null;
+let currentToken = null;
 let devMode = true;
 
 // Helper to check preferences consent
@@ -92,21 +114,30 @@ export function setPersona(persona) {
   if (persona) {
     currentPersona = persona;
     localStorage.setItem("hr_current_persona", JSON.stringify(persona));
+    // Synchronize dev authentication token to active persona role
+    const devToken = `DEV_TOKEN_${persona.id}_${persona.role}`;
+    setToken(devToken);
+  } else {
+    currentPersona = null;
+    localStorage.removeItem("hr_current_persona");
+    setToken(null);
   }
 }
 
 export function getCurrentPersona() {
+  if (currentPersona) return currentPersona;
   const saved = localStorage.getItem("hr_current_persona");
   if (saved) {
     try {
       currentPersona = JSON.parse(saved);
+      return currentPersona;
     } catch (_) {}
   }
-  return currentPersona;
+  return null;
 }
 
 export function setToken(token) {
-  currentToken = token || "";
+  currentToken = token || null;
   if (token) {
     localStorage.setItem("hr_auth_token", token);
   } else {
@@ -114,30 +145,67 @@ export function setToken(token) {
   }
 }
 
+export function getToken() {
+  const p = getCurrentPersona();
+  if (!p) {
+    try {
+      const stored = localStorage.getItem("hr_auth_token");
+      if (stored) return stored;
+    } catch (_) {}
+    return null;
+  }
+
+  // Active persona exists.
+  const expectedDevToken = `DEV_TOKEN_${p.id}_${p.role}`;
+  let token = currentToken;
+  if (!token) {
+    try {
+      token = localStorage.getItem("hr_auth_token");
+    } catch (_) {}
+  }
+
+  // If no token exists, or if token is a dev token that does NOT match the active persona:
+  if (!token || token.startsWith("DEV_TOKEN_")) {
+    if (token !== expectedDevToken) {
+      token = expectedDevToken;
+      setToken(token);
+    }
+  }
+
+  return token;
+}
+
+export function isAuthenticated() {
+  return Boolean(getToken() && getCurrentPersona());
+}
+
 export function getAuthHeaders(token = null, persona = null) {
-  const p = persona || currentPersona;
+  const p = persona || getCurrentPersona();
   const headers = { "Content-Type": "application/json" };
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  } else if (currentToken) {
-    headers["Authorization"] = `Bearer ${currentToken}`;
-  } else {
-    headers["Authorization"] = `Bearer DEV_TOKEN_${p.id}_${p.role}`;
+  const effectiveToken = token || getToken() || (p ? `DEV_TOKEN_${p.id}_${p.role}` : "");
+  if (effectiveToken) {
+    headers["Authorization"] = `Bearer ${effectiveToken}`;
   }
   return headers;
 }
 
-export function getToken() {
-  if (currentToken) return currentToken;
-  try {
-    const stored = localStorage.getItem("hr_auth_token");
-    if (stored) {
-      currentToken = stored;
-      return stored;
-    }
-  } catch (_) {}
-  const p = getCurrentPersona() || PERSONAS.EMP001;
-  return `DEV_TOKEN_${p.id}_${p.role}`;
+let lastApiError = null;
+const apiErrorListeners = new Set();
+
+export function getLastApiError() {
+  return lastApiError;
+}
+
+export function subscribeApiError(listener) {
+  apiErrorListeners.add(listener);
+  return () => apiErrorListeners.delete(listener);
+}
+
+function notifyApiError(err) {
+  lastApiError = { message: err?.message || String(err), time: Date.now() };
+  apiErrorListeners.forEach((fn) => {
+    try { fn(lastApiError); } catch (_) {}
+  });
 }
 
 export async function checkBackendHealth() {
@@ -145,10 +213,14 @@ export async function checkBackendHealth() {
     const res = await fetch(`${API_BASE}/api/health`, {
       headers: { "Accept": "application/json" },
     });
-    if (!res.ok) return { online: false, status: res.status };
+    if (!res.ok) {
+      notifyApiError(new Error(`Health check returned status ${res.status}`));
+      return { online: false, status: res.status };
+    }
     const data = await res.json();
     return { online: true, ...data };
   } catch (err) {
+    notifyApiError(err);
     return { online: false, error: err.message };
   }
 }
@@ -179,7 +251,9 @@ export async function apiFetch(path, options = {}) {
   try {
     res = await fetch(url, fetchOptions);
   } catch (networkErr) {
-    throw new Error(`Cannot reach the server at ${API_BASE}. Is the backend running? (${networkErr.message})`);
+    const err = new Error(`Cannot reach the server at ${API_BASE}. Is the backend running? (${networkErr.message})`);
+    notifyApiError(err);
+    throw err;
   }
 
   if (!res.ok) {
@@ -195,13 +269,16 @@ export async function apiFetch(path, options = {}) {
       }
     }
 
+    let err;
     if (res.status === 401) {
-      throw new Error(`Authentication required (401): ${detail || 'Session invalid or expired'}`);
+      err = new Error(`Authentication required (401): ${detail || 'Session invalid or expired'}`);
     } else if (res.status === 403) {
-      throw new Error(`Forbidden (403): ${detail || 'You do not have permission to perform this action'}`);
+      err = new Error(`Forbidden (403): ${detail || 'You do not have permission to perform this action'}`);
     } else {
-      throw new Error(`Server returned ${res.status}: ${detail || res.statusText}`);
+      err = new Error(`Server returned ${res.status}: ${detail || res.statusText}`);
     }
+    notifyApiError(err);
+    throw err;
   }
 
   const contentType = res.headers.get("content-type") || "";
@@ -556,8 +633,8 @@ export async function logout() {
       credentials: "include",
     });
   } catch (_) {}
-  setToken("");
-  localStorage.removeItem("hr_current_persona");
+  setToken(null);
+  setPersona(null);
 }
 
 export async function getAuthMe() {
@@ -1044,40 +1121,61 @@ export async function fetchHRMetrics(period = "2026-10") {
   }
 
   try {
-    const list = await apiFetch(`/submissions?period=${period}`);
-    const items = Array.isArray(list) ? list : [];
-    const submitted = items.filter((s) => s.status === "submitted" || s.status === "approved").length;
-    return {
-      period,
-      submitted_count: submitted,
-      pending_count: Math.max(0, items.length - submitted),
-      total_employees: items.length,
-      critical_exceptions: 0,
-      readiness_percentage: items.length > 0 ? Math.round((submitted / items.length) * 100) : 100,
-      coverage_percentage: items.length > 0 ? 100 : 0,
-      submission_donut: [
-        { name: "Submitted", value: submitted, fill: "#10B981" },
-        { name: "Pending", value: Math.max(0, items.length - submitted), fill: "#D4A84B" },
-      ],
-      flags_by_family: [],
-    };
+    const data = await apiFetch(`/api/audit/hr-metrics?period=${period}`);
+    return data;
   } catch (e) {
-    console.warn("Could not fetch HR metrics:", e);
-    return {
-      period,
-      submitted_count: 0,
-      pending_count: 0,
-      total_employees: 0,
-      critical_exceptions: 0,
-      readiness_percentage: 100,
-      coverage_percentage: 0,
-      submission_donut: [
-        { name: "Submitted", value: 0, fill: "#10B981" },
-        { name: "Pending", value: 0, fill: "#D4A84B" },
-      ],
-      flags_by_family: [],
-    };
+    console.warn("Could not fetch real HR metrics:", e);
+    try {
+      const list = await apiFetch(`/submissions?period=${period}`);
+      const items = Array.isArray(list) ? list : [];
+      const submitted = items.filter((s) => s.status === "submitted" || s.status === "approved").length;
+      return {
+        period,
+        submitted_count: submitted,
+        pending_count: Math.max(0, items.length - submitted),
+        total_employees: items.length,
+        open_blockers: 0,
+        average_readiness: items.length > 0 ? Math.round((submitted / items.length) * 100) : 100,
+        average_resolve_days: 1.2,
+        submission_donut: [
+          { name: "Submitted", value: submitted, fill: "#10B981" },
+          { name: "Pending", value: Math.max(0, items.length - submitted), fill: "#D4A84B" },
+        ],
+        issues_by_rule: [],
+        top_recurring_issues: [],
+      };
+    } catch (_) {
+      return {
+        period,
+        submitted_count: 0,
+        pending_count: 0,
+        total_employees: 0,
+        open_blockers: 0,
+        average_readiness: 100,
+        average_resolve_days: 1.2,
+        submission_donut: [
+          { name: "Submitted", value: 0, fill: "#10B981" },
+          { name: "Pending", value: 0, fill: "#D4A84B" },
+        ],
+        issues_by_rule: [],
+        top_recurring_issues: [],
+      };
+    }
   }
+}
+
+export async function fetchManagerMetrics(period = "2026-10") {
+  return await apiFetch(`/api/audit/manager-metrics?period=${period}`);
+}
+
+export async function fetchSyncStatus() {
+  return await apiFetch("/api/sync/status");
+}
+
+export async function retryUpload(uploadId) {
+  return await apiFetch(`/api/uploads/${uploadId}/retry`, {
+    method: "POST",
+  });
 }
 
 export async function fetchSubmissions(period = "2026-10") {
@@ -1213,15 +1311,32 @@ export async function rerunAudit(period = null) {
   });
 }
 
-export async function fetchAuditPeriods() {
+let _periodsCache = null;
+let _periodsCacheTime = 0;
+
+export function invalidatePeriodsCache() {
+  _periodsCache = null;
+  _periodsCacheTime = 0;
+}
+
+export async function fetchAuditPeriods(forceRefresh = false) {
+  const now = Date.now();
+  if (!forceRefresh && _periodsCache && (now - _periodsCacheTime < 30000)) {
+    return _periodsCache;
+  }
   try {
-    return await apiFetch('/api/audit/periods');
+    const data = await apiFetch('/api/audit/periods');
+    _periodsCache = data;
+    _periodsCacheTime = now;
+    return data;
   } catch (e) {
+    if (_periodsCache) return _periodsCache;
     return { periods: ['2026-10'], default_period: '2026-10' };
   }
 }
 
 export async function resetAllDataApi() {
+  invalidatePeriodsCache();
   return apiFetch('/api/admin/reset-data', {
     method: 'POST',
   });

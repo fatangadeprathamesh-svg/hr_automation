@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   fetchReadiness,
   submitCorrection,
@@ -6,6 +6,8 @@ import {
   explainFlagAI,
   draftCorrectionAI,
   fetchAuditPeriods,
+  checkBackendHealth,
+  fetchSyncStatus,
 } from '../api';
 import GlassCard from '../components/common/GlassCard';
 import ReadinessRing from '../components/common/ReadinessRing';
@@ -44,6 +46,8 @@ export default function EmployeePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
+  const [isServerUnreachable, setIsServerUnreachable] = useState(false);
+  const [syncStatus, setSyncStatus] = useState(null);
 
   // Month selector
   const [selectedMonth, setSelectedMonth] = useState('2026-10');
@@ -82,11 +86,39 @@ export default function EmployeePage() {
     initPeriods();
   }, []);
 
+  const lastFetchRef = useRef(0);
+
   useEffect(() => {
     if (selectedMonth) {
       loadData(selectedMonth);
     }
   }, [selectedMonth]);
+
+  // Tab focus listener with 30s throttling and background refresh (no blanking screen)
+  useEffect(() => {
+    function onFocus() {
+      const now = Date.now();
+      if (selectedMonth && now - lastFetchRef.current > 30000) {
+        lastFetchRef.current = now;
+        loadData(selectedMonth, true);
+      }
+    }
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [selectedMonth]);
+
+  // Offline health check timer (every 5 seconds)
+  useEffect(() => {
+    if (!isServerUnreachable) return;
+    const interval = setInterval(async () => {
+      const health = await checkBackendHealth();
+      if (health.online) {
+        setIsServerUnreachable(false);
+        loadData(selectedMonth, true);
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isServerUnreachable, selectedMonth]);
 
   async function handleOpenExplainer(flag) {
     setExplainFlag(flag);
@@ -121,16 +153,31 @@ export default function EmployeePage() {
     }
   }
 
-  async function loadData(month = selectedMonth) {
-    setLoading(true);
+  async function loadData(month = selectedMonth, isBackground = false) {
+    if (!isBackground) {
+      setLoading(true);
+    }
     setError(null);
     try {
-      const res = await fetchReadiness(month);
+      lastFetchRef.current = Date.now();
+      const [res, sync] = await Promise.all([
+        fetchReadiness(month),
+        fetchSyncStatus().catch(() => null),
+      ]);
       setData(res);
+      setIsServerUnreachable(false);
+      if (sync) setSyncStatus(sync);
     } catch (err) {
-      setError(err.message || 'Failed to load readiness audit.');
+      const msg = err.message || '';
+      if (msg.includes('Cannot reach the server') || msg.includes('Failed to fetch')) {
+        setIsServerUnreachable(true);
+      } else {
+        setError(msg || 'Failed to load readiness audit.');
+      }
     } finally {
-      setLoading(false);
+      if (!isBackground) {
+        setLoading(false);
+      }
     }
   }
 
@@ -188,7 +235,7 @@ export default function EmployeePage() {
   const blockers = data?.blocking_count || 0;
   const warnings = data?.warning_count || 0;
   const resolved = data?.resolved_count || 0;
-  const readiness = data?.readiness_percentage;
+  const readiness = data?.readiness_percentage ?? data?.readiness_score ?? null;
   const canSubmit = hasEvaluated && blockers === 0 && Boolean(data?.can_submit);
 
   return (
@@ -196,14 +243,23 @@ export default function EmployeePage() {
       {/* Top Header & Month Selector */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <span>Employee Month-End Self-Audit</span>
-            {data?.employee_id && (
-              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-md bg-[var(--surface-2)] text-[var(--accent-text)] border border-[var(--border)]">
-                {data.employee_id} {data.employee_name ? `• ${data.employee_name}` : ''}
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span>Employee Month-End Self-Audit</span>
+              {data?.employee_id && (
+                <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-md bg-[var(--surface-2)] text-[var(--accent-text)] border border-[var(--border)]">
+                  {data.employee_id} {data.employee_name ? `• ${data.employee_name}` : ''}
+                </span>
+              )}
+            </h1>
+            {/* Sync freshness chip */}
+            {syncStatus?.last_evaluation_time && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Data synced {new Date(syncStatus.last_evaluation_time).toLocaleTimeString()} | {syncStatus.total_findings ?? 0} findings
               </span>
             )}
-          </h1>
+          </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Deterministic pre-payroll verification of punches, hours, and expense claims.
           </p>
@@ -229,26 +285,48 @@ export default function EmployeePage() {
         </div>
       </div>
 
-      {/* Unlinked Account Notice */}
-      {!isLinked && (
-        <div className="rounded-2xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-5 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-          <div className="text-xs text-amber-900 dark:text-amber-200">
-            <h4 className="font-bold text-sm mb-1">Account Not Linked to Employee Record</h4>
-            <p>{data?.message || 'Your account is not linked to an employee record yet. Import the master CSV or ask HR.'}</p>
+      {/* Backend Unreachable Banner (Single banner with Retry button; no 'not linked' when offline) */}
+      {isServerUnreachable ? (
+        <div className="rounded-2xl border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+            <div className="text-xs text-rose-900 dark:text-rose-200">
+              <h4 className="font-bold text-sm mb-0.5">Cannot reach the server (http://127.0.0.1:8000)</h4>
+              <p>Start the backend and press Retry. Checking connection every 5s...</p>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={() => loadData(selectedMonth)}
+            className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shrink-0 transition shadow-sm"
+          >
+            Retry
+          </button>
         </div>
-      )}
+      ) : (
+        <>
+          {/* Unlinked Account Notice (Shown ONLY when backend is reachable) */}
+          {!isLinked && (
+            <div className="rounded-2xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-5 flex items-start gap-3 shadow-sm">
+              <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div className="text-xs text-amber-900 dark:text-amber-200">
+                <h4 className="font-bold text-sm mb-1">Account Not Linked to Employee Record</h4>
+                <p>{data?.message || 'Your account is not linked to an employee record yet. Import the master CSV or ask HR.'}</p>
+              </div>
+            </div>
+          )}
 
-      {/* No Data Notice */}
-      {isLinked && !hasData && (
-        <div className="rounded-2xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 p-5 flex items-start gap-3">
-          <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-          <div className="text-xs text-blue-900 dark:text-blue-200">
-            <h4 className="font-bold text-sm mb-1">No Data Available</h4>
-            <p>No imported attendance, timesheet, or expense records were found for your account in {selectedMonth}. Import master CSV data to begin audit evaluation.</p>
-          </div>
-        </div>
+          {/* No Data Notice */}
+          {isLinked && !hasData && (
+            <div className="rounded-2xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 p-5 flex items-start gap-3 shadow-sm">
+              <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+              <div className="text-xs text-blue-900 dark:text-blue-200">
+                <h4 className="font-bold text-sm mb-1">No Data Available</h4>
+                <p>No imported attendance, timesheet, or expense records were found for your account in {selectedMonth}. Import master CSV data to begin audit evaluation.</p>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Notifications */}
@@ -301,29 +379,45 @@ export default function EmployeePage() {
         <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <StatsCard
             title="Blocking Issues"
-            value={isLinked && hasData && hasEvaluated ? blockers : '--'}
-            subtitle={blockers > 0 ? 'Requires manager sign-off' : 'All critical checks clear'}
+            value={!isLinked || !hasData || !hasEvaluated ? '--' : blockers}
+            subtitle={
+              !isLinked || !hasData || !hasEvaluated
+                ? 'Not evaluated yet. Import data to run the audit'
+                : blockers > 0
+                ? 'Requires manager sign-off'
+                : 'All critical checks clear'
+            }
             icon={ShieldAlert}
-            color={blockers > 0 ? 'red' : 'green'}
+            color={!isLinked || !hasData || !hasEvaluated ? 'blue' : blockers > 0 ? 'red' : 'green'}
           />
           <StatsCard
             title="Warning Flags"
-            value={isLinked && hasData && hasEvaluated ? warnings : '--'}
-            subtitle="Informational policy notices"
+            value={!isLinked || !hasData || !hasEvaluated ? '--' : warnings}
+            subtitle={
+              !isLinked || !hasData || !hasEvaluated
+                ? 'Not evaluated yet. Import data to run the audit'
+                : warnings > 0
+                ? 'Informational policy notices'
+                : 'No policy warnings'
+            }
             icon={AlertTriangle}
-            color="amber"
+            color={!isLinked || !hasData || !hasEvaluated ? 'blue' : warnings > 0 ? 'amber' : 'green'}
           />
           <StatsCard
             title="Resolved Items"
-            value={isLinked && hasData && hasEvaluated ? resolved : '--'}
-            subtitle="Verified in current period"
+            value={!isLinked || !hasData || !hasEvaluated ? '--' : resolved}
+            subtitle={
+              !isLinked || !hasData || !hasEvaluated
+                ? 'Not evaluated yet. Import data to run the audit'
+                : 'Verified in current period'
+            }
             icon={CheckCircle2}
-            color="green"
+            color={!isLinked || !hasData || !hasEvaluated ? 'blue' : 'green'}
           />
           <StatsCard
             title="Audit Cycle"
             value={selectedMonth}
-            subtitle={hasEvaluated ? 'Evaluation complete' : 'Evaluation pending'}
+            subtitle={hasEvaluated ? 'Evaluation complete' : 'Not evaluated yet. Import data to run the audit'}
             icon={Calendar}
             color="blue"
           />

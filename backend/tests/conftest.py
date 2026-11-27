@@ -1,6 +1,7 @@
 import pytest
 from datetime import date
 from sqlalchemy import create_engine, event
+from sqlalchemy.pool import StaticPool
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
 
@@ -17,7 +18,11 @@ from app.main import app
 
 TEST_DB_URL = "sqlite:///:memory:"
 
-engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False})
+engine = create_engine(
+    TEST_DB_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -79,15 +84,6 @@ def db_session():
     connection = engine.connect()
     trans = connection.begin()
     session = TestingSessionLocal(bind=connection)
-
-    # Use nested savepoints so session.commit() inside service/tests works seamlessly
-    nested = connection.begin_nested()
-
-    @event.listens_for(session, "after_transaction_end")
-    def end_savepoint(session, transaction):
-        nonlocal nested
-        if not nested.is_active:
-            nested = connection.begin_nested()
 
     yield session
 

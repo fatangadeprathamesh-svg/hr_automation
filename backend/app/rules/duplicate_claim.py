@@ -92,16 +92,18 @@ class DuplicateClaimRule(BaseRule):
             dup_reason = ""
             matched_ids = []
 
-            # Check receipt reference collision
+            # Check receipt reference collision (flag subsequent duplicates after original)
             if rec_ref and len(receipt_groups[rec_ref]) > 1:
-                is_dup = True
-                matched_ids = [getattr(c, "source_record_id", c.id) for c in receipt_groups[rec_ref] if getattr(c, "source_record_id", c.id) != claim_id]
-                dup_reason = f"Duplicate receipt reference '{rec_ref}' attached to multiple claims: {matched_ids}."
-            # Check content collision
+                if claim != receipt_groups[rec_ref][0]:
+                    is_dup = True
+                    matched_ids = [getattr(c, "source_record_id", c.id) for c in receipt_groups[rec_ref] if getattr(c, "source_record_id", c.id) != claim_id]
+                    dup_reason = f"Duplicate receipt reference '{rec_ref}' attached to multiple claims: {matched_ids}."
+            # Check content collision (flag subsequent duplicates after original)
             elif len(content_groups[content_key]) > 1:
-                is_dup = True
-                matched_ids = [getattr(c, "source_record_id", c.id) for c in content_groups[content_key] if getattr(c, "source_record_id", c.id) != claim_id]
-                dup_reason = f"Identical claim details (date: {c_date}, category: {c_cat}, amount: {c_amt}) matched claim {matched_ids}."
+                if claim != content_groups[content_key][0]:
+                    is_dup = True
+                    matched_ids = [getattr(c, "source_record_id", c.id) for c in content_groups[content_key] if getattr(c, "source_record_id", c.id) != claim_id]
+                    dup_reason = f"Identical claim details (date: {c_date}, category: {c_cat}, amount: {c_amt}) matched claim {matched_ids}."
 
             if is_dup:
                 has_duplicate = True

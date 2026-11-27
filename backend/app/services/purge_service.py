@@ -66,6 +66,18 @@ def ensure_baseline_schema_and_accounts(db: Session) -> dict:
     """
     Base.metadata.create_all(bind=engine)
 
+    # Dynamic SQLite migrations for incremental columns
+    try:
+        with engine.begin() as conn:
+            m_cols = [r[1] for r in conn.execute(text("PRAGMA table_info(master_uploads)")).fetchall()]
+            if "pipeline_stages" not in m_cols:
+                conn.execute(text("ALTER TABLE master_uploads ADD COLUMN pipeline_stages JSON"))
+            e_cols = [r[1] for r in conn.execute(text("PRAGMA table_info(employees)")).fetchall()]
+            if "manager" not in e_cols:
+                conn.execute(text("ALTER TABLE employees ADD COLUMN manager VARCHAR(255)"))
+    except Exception as migr_err:
+        logger.debug("Schema migration check: %s", migr_err)
+
     # 1. Ensure 4 core test personas exist in Employee table
     personas = [
         {

@@ -1,16 +1,30 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Sun, Moon, ShieldAlert, ChevronDown, Check } from 'lucide-react';
-import { getCurrentPersona, setPersona, PERSONAS, getSavedTheme, saveTheme, checkBackendHealth } from '../../api';
+import { getCurrentPersona, setPersona, PERSONAS, getSavedTheme, saveTheme, checkBackendHealth, getRoleHome, subscribeApiError } from '../../api';
 
 export default function TopBar({ title = 'HR Self-Audit Assistant', onPersonaChange = null }) {
+  const navigate = useNavigate();
   const [theme, setTheme] = useState(getSavedTheme());
   const [persona, setCurrent] = useState(getCurrentPersona());
   const [menuOpen, setMenuOpen] = useState(false);
   const [backendStatus, setBackendStatus] = useState({ checked: false, online: false });
+  const [recentError, setRecentError] = useState(null);
 
   useEffect(() => {
     saveTheme(theme);
   }, [theme]);
+
+  // Subscribe to recent API failures
+  useEffect(() => {
+    const unsubscribe = subscribeApiError((err) => {
+      setRecentError(err);
+      setTimeout(() => {
+        setRecentError(null);
+      }, 15000);
+    });
+    return unsubscribe;
+  }, []);
 
   // Check backend health on mount and periodically
   useEffect(() => {
@@ -51,7 +65,17 @@ export default function TopBar({ title = 'HR Self-Audit Assistant', onPersonaCha
     setCurrent(p);
     setMenuOpen(false);
     if (onPersonaChange) onPersonaChange(p);
+    navigate(getRoleHome(p.role));
   }
+
+  const getInitials = (p) => {
+    if (p?.name) {
+      return p.name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase();
+    }
+    return (p?.id || 'HR').substring(0, 2);
+  };
+
+  const uniquePersonas = Array.from(new Map(Object.values(PERSONAS).map((p) => [p.id, p])).values());
 
   return (
     <header className="relative z-30 glass-panel rounded-2xl px-6 py-3.5 mb-6 flex items-center justify-between shadow-sm">
@@ -65,25 +89,39 @@ export default function TopBar({ title = 'HR Self-Audit Assistant', onPersonaCha
           DEV mode active
         </span>
 
-        {/* Backend Online/Offline Status Indicator */}
+        {/* Backend Online/Offline & Request Error Status Indicator */}
         <span
           title={
-            backendStatus.online
-              ? `Backend is Online at 127.0.0.1:8000 (Database: ${backendStatus.db || 'connected'})`
-              : 'Backend is Offline (Cannot reach http://127.0.0.1:8000/api/health)'
+            !backendStatus.online
+              ? 'Backend is Offline (Cannot reach http://127.0.0.1:8000/api/health)'
+              : recentError
+              ? `Backend is online but recently reported an error: ${recentError.message}`
+              : `Backend is Online at 127.0.0.1:8000 (Database: ${backendStatus.db || 'connected'})`
           }
           className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border transition-all ${
-            backendStatus.online
-              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-              : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+            !backendStatus.online
+              ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+              : recentError
+              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
           }`}
         >
           <span
             className={`w-2 h-2 rounded-full ${
-              backendStatus.online ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
+              !backendStatus.online
+                ? 'bg-rose-500'
+                : recentError
+                ? 'bg-amber-500 animate-pulse'
+                : 'bg-emerald-500 animate-pulse'
             }`}
           />
-          <span>{backendStatus.online ? 'Backend Online' : 'Backend Offline'}</span>
+          <span>
+            {!backendStatus.online
+              ? 'Backend Offline'
+              : recentError
+              ? 'Backend Issues'
+              : 'Backend Online'}
+          </span>
         </span>
       </div>
 
@@ -101,12 +139,16 @@ export default function TopBar({ title = 'HR Self-Audit Assistant', onPersonaCha
             aria-expanded={menuOpen}
             aria-label="Switch active test persona"
           >
-            <div className="w-6 h-6 rounded-full bg-[var(--accent)] text-[var(--accent-ink)] flex items-center justify-center font-bold text-[10px] shrink-0 shadow-sm shadow-[var(--accent-glow)]">
-              {persona.id.substring(0, 3)}
+            <div className="w-7 h-7 rounded-full bg-[var(--accent)] text-[var(--accent-ink)] flex items-center justify-center font-bold text-[11px] shrink-0 shadow-sm shadow-[var(--accent-glow)]">
+              {getInitials(persona)}
             </div>
             <div className="text-left hidden sm:block">
-              <span className="block font-semibold leading-tight text-slate-900 dark:text-white">{persona.name}</span>
-              <span className="block text-[10px] text-slate-500 dark:text-slate-400 capitalize">{persona.role.replace('_', ' ')}</span>
+              <span className="block font-semibold leading-tight text-slate-900 dark:text-white">
+                {persona?.name || 'User'} <span className="font-mono text-[10px] text-[var(--accent-text)] font-bold">({persona?.id || ''})</span>
+              </span>
+              <span className="block text-[10px] text-slate-500 dark:text-slate-400 capitalize">
+                {(persona?.role || 'employee').replace('_', ' ')}
+              </span>
             </div>
             <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${menuOpen ? 'rotate-180 text-[var(--accent-text)]' : ''}`} />
           </button>
@@ -127,7 +169,7 @@ export default function TopBar({ title = 'HR Self-Audit Assistant', onPersonaCha
                   <span className="text-[9px] font-normal lowercase text-slate-400">role preview</span>
                 </div>
                 <div className="py-1">
-                  {Object.values(PERSONAS).map((p) => {
+                  {uniquePersonas.map((p) => {
                     const isSelected = persona.id === p.id;
                     return (
                       <button
@@ -145,11 +187,11 @@ export default function TopBar({ title = 'HR Self-Audit Assistant', onPersonaCha
                               ? 'bg-[var(--accent)] text-[var(--accent-ink)] shadow-sm'
                               : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
                           }`}>
-                            {p.id.substring(0, 3)}
+                            {getInitials(p)}
                           </div>
                           <div>
                             <span className="font-semibold block leading-tight text-slate-900 dark:text-white">
-                              {p.name}
+                              {p.name} <span className="font-mono text-[10px] text-[var(--accent-text)]">({p.id})</span>
                             </span>
                             <span className="text-[10px] text-slate-500 dark:text-slate-400 capitalize">
                               {p.role.replace('_', ' ')} &bull; {p.department}

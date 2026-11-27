@@ -1,19 +1,23 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { UserCheck, Users, Shield, ScrollText, LogOut, FileSearch, UploadCloud, Briefcase } from 'lucide-react';
-import { logout } from '../../api';
+import { logout, getCurrentPersona } from '../../api';
 
 export default function Sidebar() {
   const navigate = useNavigate();
+  const persona = getCurrentPersona();
+  const role = persona?.role || 'employee';
 
-  const navItems = [
-    { to: '/employee', label: 'Employee', icon: UserCheck },
-    { to: '/manager', label: 'Manager', icon: Users },
-    { to: '/hr', label: 'HR Admin', icon: Shield },
-    { to: '/duties', label: 'Duties', icon: Briefcase },
-    { to: '/data-import', label: 'Import', icon: UploadCloud },
-    { to: '/audit-log', label: 'Audit log', icon: ScrollText },
+  const allNavItems = [
+    { to: '/employee', label: 'Employee', icon: UserCheck, roles: ['employee'] },
+    { to: '/manager', label: 'Manager', icon: Users, roles: ['manager'] },
+    { to: '/hr', label: 'HR Admin', icon: Shield, roles: ['hr_admin', 'hr'] },
+    { to: '/duties', label: 'Duties', icon: Briefcase, roles: ['employee', 'manager', 'hr_admin', 'hr', 'ic_member'] },
+    { to: '/data-import', label: 'Import', icon: UploadCloud, roles: ['hr_admin', 'hr'] },
+    { to: '/audit-log', label: 'Audit log', icon: ScrollText, roles: ['manager', 'hr_admin', 'hr'] },
   ];
+
+  const navItems = allNavItems.filter((item) => item.roles.includes(role));
 
   function handleLogout() {
     logout();
@@ -24,17 +28,17 @@ export default function Sidebar() {
     <>
       {/* Desktop Left Icon-Rail Sidebar */}
       <aside
-        className="hidden md:flex flex-col items-center justify-between w-20 py-6 glass-panel fixed left-4 top-4 bottom-4 rounded-3xl z-40"
+        className="hidden md:flex flex-col items-center justify-between w-20 py-6 glass-panel fixed left-4 top-4 bottom-4 rounded-3xl z-40 overflow-y-auto scrollbar-none"
         aria-label="Main navigation"
       >
-        <div className="flex flex-col items-center gap-8 w-full">
+        <div className="flex flex-col items-center gap-6 w-full">
           {/* Logo Brand Icon */}
-          <div className="w-12 h-12 rounded-2xl bg-[var(--accent)] flex items-center justify-center text-[var(--accent-ink)] shadow-md shadow-[var(--accent-glow)]">
+          <div className="w-12 h-12 rounded-2xl bg-[var(--accent)] flex items-center justify-center text-[var(--accent-ink)] shadow-md shadow-[var(--accent-glow)] shrink-0">
             <FileSearch className="w-6 h-6" />
           </div>
 
           {/* Navigation Links */}
-          <nav className="flex flex-col items-center gap-4 w-full px-2">
+          <nav className="flex flex-col items-center gap-3.5 w-full px-2">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -42,7 +46,7 @@ export default function Sidebar() {
                   key={item.to}
                   to={item.to}
                   className={({ isActive }) =>
-                    `group relative flex flex-col items-center justify-center w-14 h-14 rounded-2xl transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none ${
+                    `group relative flex flex-col items-center justify-center w-14 h-14 rounded-2xl transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none shrink-0 ${
                       isActive
                         ? 'bg-[var(--accent)] text-[var(--accent-ink)] font-bold shadow-md shadow-[var(--accent-glow)]'
                         : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-800/60'
@@ -59,16 +63,18 @@ export default function Sidebar() {
           </nav>
         </div>
 
-        {/* Bottom Sign-out action */}
-        <button
-          onClick={handleLogout}
-          className="flex flex-col items-center justify-center w-14 h-14 rounded-2xl text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-none"
-          title="Sign out"
-          aria-label="Sign out"
-        >
-          <LogOut className="w-5 h-5" />
-          <span className="text-[10px] font-medium mt-1">Sign out</span>
-        </button>
+        {/* Bottom Sign-out action with generous spacing */}
+        <div className="mt-auto pt-6 shrink-0 w-full flex justify-center">
+          <button
+            onClick={handleLogout}
+            className="flex flex-col items-center justify-center w-14 h-14 rounded-2xl text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-none"
+            title="Sign out"
+            aria-label="Sign out"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="text-[10px] font-medium mt-1">Sign out</span>
+          </button>
+        </div>
       </aside>
 
       {/* Mobile Bottom Tab Bar */}

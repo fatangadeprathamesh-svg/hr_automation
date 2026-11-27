@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ShieldCheck, CheckCircle2, RotateCw, ArrowLeft, ShieldAlert } from 'lucide-react';
-import { verifyOtp, resendOtp, getCurrentPersona } from '../api';
+import { verifyOtp, resendOtp, getCurrentPersona, getRoleHome } from '../api';
 import ErrorBanner from '../components/common/ErrorBanner';
 import Footer from '../components/layout/Footer';
 
@@ -105,13 +105,7 @@ export default function VerifyOtpPage() {
       // Redirect after animation completes
       setTimeout(() => {
         const persona = getCurrentPersona();
-        if (persona.role === 'manager') {
-          navigate('/manager');
-        } else if (persona.role === 'hr_admin') {
-          navigate('/hr');
-        } else {
-          navigate('/employee');
-        }
+        navigate(getRoleHome(persona?.role));
       }, 750);
     } catch (err) {
       // Trigger box shake animation on wrong code

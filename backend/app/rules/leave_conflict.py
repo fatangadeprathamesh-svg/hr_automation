@@ -98,6 +98,7 @@ class LeaveConflictRule(BaseRule):
 
                     if att_status in ("present", "late") or att_hours > 0 or has_punch:
                         conflict_found = True
+                        att_rec_id = getattr(att, "source_record_id", None) or getattr(att, "id", None)
                         results.append(
                             RuleResult(
                                 rule_id=self.rule_id,
@@ -105,9 +106,9 @@ class LeaveConflictRule(BaseRule):
                                 status=RuleOutcome.FAIL,
                                 severity=RuleSeverity.BLOCKING,
                                 evidence={
-                                    "record_id": leave_id,
+                                    "record_id": att_rec_id or leave_id,
                                     "leave_record_id": leave_id,
-                                    "attendance_record_id": getattr(att, "source_record_id", att.id),
+                                    "attendance_record_id": att_rec_id,
                                     "conflict_date": str(cur),
                                     "attendance_status": att_status or "Present",
                                     "leave_type": getattr(lv, "leave_type", "leave"),

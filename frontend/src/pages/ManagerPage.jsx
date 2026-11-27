@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   fetchPendingCorrections,
   decideCorrection,
   fetchAuditPeriods,
+  fetchManagerMetrics,
+  fetchSyncStatus,
 } from '../api';
 import GlassCard from '../components/common/GlassCard';
 import StatsCard from '../components/common/StatsCard';
@@ -33,6 +35,8 @@ import {
 
 export default function ManagerPage() {
   const [data, setData] = useState(null);
+  const [metrics, setMetrics] = useState(null);
+  const [syncStatus, setSyncStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
@@ -62,20 +66,46 @@ export default function ManagerPage() {
     initPeriods();
   }, []);
 
+  const lastFetchRef = useRef(0);
+
   useEffect(() => {
     loadData();
   }, [selectedMonth]);
 
-  async function loadData() {
-    setLoading(true);
+  // Tab focus listener with 30s throttling and background refresh
+  useEffect(() => {
+    function onFocus() {
+      const now = Date.now();
+      if (now - lastFetchRef.current > 30000) {
+        lastFetchRef.current = now;
+        loadData(true);
+      }
+    }
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [selectedMonth]);
+
+  async function loadData(isBackground = false) {
+    if (!isBackground) {
+      setLoading(true);
+    }
     setError(null);
     try {
-      const res = await fetchPendingCorrections();
-      setData(res);
+      lastFetchRef.current = Date.now();
+      const [corrRes, mgrMetrics, sync] = await Promise.all([
+        fetchPendingCorrections(),
+        fetchManagerMetrics(selectedMonth).catch(() => null),
+        fetchSyncStatus().catch(() => null),
+      ]);
+      setData(corrRes);
+      if (mgrMetrics) setMetrics(mgrMetrics);
+      if (sync) setSyncStatus(sync);
     } catch (err) {
       setError(err.message || 'Failed to load manager corrections queue.');
     } finally {
-      setLoading(false);
+      if (!isBackground) {
+        setLoading(false);
+      }
     }
   }
 
@@ -119,9 +149,17 @@ export default function ManagerPage() {
       {/* Top Header & Month Selector */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <span>Manager Corrections & Approvals</span>
-          </h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span>Manager Corrections & Approvals</span>
+            </h1>
+            {syncStatus?.last_evaluation_time && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Data synced {new Date(syncStatus.last_evaluation_time).toLocaleTimeString()} | {syncStatus.total_findings ?? 0} team findings
+              </span>
+            )}
+          </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Review and sign off on timesheet, punch, and expense corrections submitted by your team.
           </p>
@@ -165,24 +203,24 @@ export default function ManagerPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatsCard
           title="Pending Approvals"
-          value={pendingCount}
-          subtitle="Awaiting manager sign-off"
+          value={!metrics?.total_team_members ? '--' : (metrics?.pending_approvals ?? pendingCount)}
+          subtitle={!metrics?.total_team_members ? 'Not evaluated yet. Import data to run the audit' : 'Awaiting manager sign-off'}
           icon={Clock}
-          color={pendingCount > 0 ? 'accent' : 'green'}
+          color={!metrics?.total_team_members ? 'blue' : (metrics?.pending_approvals ?? pendingCount) > 0 ? 'accent' : 'green'}
         />
         <StatsCard
-          title="Avg Approval Time"
-          value={`${data?.average_approval_days || 1.4} Days`}
-          subtitle="Policy SLA: under 2.0 days"
+          title="Team Readiness"
+          value={!metrics?.total_team_members ? '--' : `${metrics?.average_readiness ?? 100}%`}
+          subtitle={!metrics?.total_team_members ? 'Not evaluated yet. Import data to run the audit' : `Across ${metrics?.total_team_members ?? 0} direct reports`}
           icon={Users}
           color="blue"
         />
         <StatsCard
-          title="Approvals This Week"
-          value={data?.total_approvals_count || '0'}
-          subtitle="Cryptographically recorded"
+          title="Open Team Blockers"
+          value={!metrics?.total_team_members ? '--' : (metrics?.open_blockers ?? 0)}
+          subtitle={!metrics?.total_team_members ? 'Not evaluated yet. Import data to run the audit' : 'Requires remediation'}
           icon={CheckCircle2}
-          color="green"
+          color={!metrics?.total_team_members ? 'blue' : (metrics?.open_blockers ?? 0) > 0 ? 'red' : 'green'}
         />
       </div>
 

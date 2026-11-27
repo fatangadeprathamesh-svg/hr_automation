@@ -2,10 +2,11 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Header, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+from sqlalchemy import or_, func
 from app.database import get_db
 from app.auth.security import get_current_actor, ActorIdentity
 from app.exports.service import SubmissionGateService
-from app.models.hr import SubmissionPack
+from app.models.hr import SubmissionPack, Employee
 
 router = APIRouter(prefix="/submissions", tags=["Submissions & Snapshots"])
 
@@ -85,11 +86,46 @@ def list_submissions(
     """
     Retrieves submission packs:
     - For Employees: own submission packs.
-    - For HR / Managers / Service: all submission packs (filtered by period if provided).
+    - For Managers: direct reports' submissions + own.
+    - For HR / Service: all submission packs (filtered by period if provided).
     """
     query = db.query(SubmissionPack)
     if actor.role == "employee":
+        clean_email = (actor.email or "").strip().lower()
+        candidate_emails = [clean_email]
+        if "@example.com" in clean_email:
+            candidate_emails.append(clean_email.replace("@example.com", "@company.com"))
+        elif "@company.com" in clean_email:
+            candidate_emails.append(clean_email.replace("@company.com", "@example.com"))
+
+        emp = db.query(Employee).filter(
+            or_(
+                Employee.employee_id == actor.actor_id,
+                *[func.lower(Employee.email) == ce for ce in candidate_emails]
+            )
+        ).first()
+        target_id = emp.employee_id if emp else actor.actor_id
+        query = query.filter(SubmissionPack.employee_id == target_id)
+    elif actor.role == "manager":
+        mgr_emp = db.query(Employee).filter(
+            or_(
+                Employee.employee_id == actor.actor_id,
+                func.lower(Employee.email) == (actor.email or "").lower()
+            )
+        ).first()
+        mgr_name = mgr_emp.full_name if mgr_emp else actor.actor_id
+        team_emps = db.query(Employee).filter(
+            or_(
+                Employee.manager == mgr_name,
+                Employee.manager_id == actor.actor_id,
+                Employee.employee_id == actor.actor_id
+            )
+        ).all()
+        team_ids = [e.employee_id for e in team_emps] or [actor.actor_id]
+        query = query.filter(SubmissionPack.employee_id.in_(team_ids))
+    elif actor.role not in ("hr_admin", "hr", "service"):
         query = query.filter(SubmissionPack.employee_id == actor.actor_id)
+
     if period:
         query = query.filter(SubmissionPack.period == period)
     packs = query.order_by(SubmissionPack.submitted_at.desc()).all()

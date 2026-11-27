@@ -68,6 +68,8 @@ class MissingReceiptRule(BaseRule):
                             severity=RuleSeverity.BLOCKING,
                             evidence={
                                 "record_id": claim_id,
+                                "claim_date": str(getattr(claim, "claim_date", "")),
+                                "event_date": str(getattr(claim, "claim_date", "")),
                                 "amount": amount,
                                 "currency": getattr(claim, "currency", "USD"),
                                 "category": getattr(claim, "category", ""),

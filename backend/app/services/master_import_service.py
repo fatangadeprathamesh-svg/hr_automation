@@ -3,7 +3,7 @@ import csv
 import time
 import logging
 import re
-from datetime import datetime, date, time as dtime
+from datetime import datetime, date, timezone, time as dtime
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional, Set
 from sqlalchemy import text, or_, func
@@ -154,8 +154,8 @@ ON CONFLICT(record_id) DO UPDATE SET
 """
 
 UPSERT_EMPLOYEE_SQL = """
-INSERT INTO employees (employee_id, organization_id, email, full_name, manager, hire_date, termination_date, is_active, created_at)
-VALUES (:employee_id, :organization_id, :email, :full_name, :manager, :hire_date, :termination_date, :is_active, CURRENT_TIMESTAMP)
+INSERT INTO employees (employee_id, organization_id, email, full_name, manager, timezone, hire_date, termination_date, is_active, created_at)
+VALUES (:employee_id, :organization_id, :email, :full_name, :manager, 'America/New_York', :hire_date, :termination_date, :is_active, CURRENT_TIMESTAMP)
 ON CONFLICT(employee_id) DO UPDATE SET
     email = excluded.email,
     full_name = excluded.full_name,
@@ -166,8 +166,8 @@ ON CONFLICT(employee_id) DO UPDATE SET
 """
 
 UPSERT_ATTENDANCE_SQL = """
-INSERT INTO attendance (id, organization_id, source_system, source_record_id, employee_id, work_date, clock_in, clock_out, timezone, shift_id, approval_state, hours_total, status, overtime_approved, created_at, updated_at)
-VALUES (:id, :organization_id, 'master_csv', :record_id, :employee_id, :work_date, :clock_in, :clock_out, 'America/New_York', NULL, 'approved', :hours_total, :status, :overtime_approved, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+INSERT INTO attendance (id, organization_id, source_system, source_record_id, employee_id, work_date, clock_in, clock_out, timezone, shift_id, approval_state, hours_total, status, overtime_approved, import_id, imported_at, record_version)
+VALUES (:id, :organization_id, 'master_csv', :record_id, :employee_id, :work_date, :clock_in, :clock_out, 'America/New_York', NULL, 'approved', :hours_total, :status, :overtime_approved, :upload_id, CURRENT_TIMESTAMP, 1)
 ON CONFLICT(organization_id, source_system, source_record_id) DO UPDATE SET
     employee_id = excluded.employee_id,
     work_date = excluded.work_date,
@@ -176,12 +176,12 @@ ON CONFLICT(organization_id, source_system, source_record_id) DO UPDATE SET
     hours_total = excluded.hours_total,
     status = excluded.status,
     overtime_approved = excluded.overtime_approved,
-    updated_at = CURRENT_TIMESTAMP
+    imported_at = CURRENT_TIMESTAMP
 """
 
 UPSERT_TIMESHEET_SQL = """
-INSERT INTO timesheets (id, organization_id, source_system, source_record_id, employee_id, work_date, regular_hours, overtime_hours, approval_state, hours_total, status, created_at, updated_at)
-VALUES (:id, :organization_id, 'master_csv', :record_id, :employee_id, :work_date, :hours_total, 0.0, :approval_state, :hours_total, :status, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+INSERT INTO timesheets (id, organization_id, source_system, source_record_id, employee_id, work_date, regular_hours, overtime_hours, approval_state, hours_total, status, import_id, imported_at, record_version)
+VALUES (:id, :organization_id, 'master_csv', :record_id, :employee_id, :work_date, :hours_total, 0.0, :approval_state, :hours_total, :status, :upload_id, CURRENT_TIMESTAMP, 1)
 ON CONFLICT(organization_id, source_system, source_record_id) DO UPDATE SET
     employee_id = excluded.employee_id,
     work_date = excluded.work_date,
@@ -189,12 +189,12 @@ ON CONFLICT(organization_id, source_system, source_record_id) DO UPDATE SET
     approval_state = excluded.approval_state,
     hours_total = excluded.hours_total,
     status = excluded.status,
-    updated_at = CURRENT_TIMESTAMP
+    imported_at = CURRENT_TIMESTAMP
 """
 
 UPSERT_EXPENSE_SQL = """
-INSERT INTO expense_claims (id, organization_id, source_system, source_record_id, employee_id, claim_date, category, amount, currency, receipt_reference, receipt_attached, approval_state, created_at, updated_at)
-VALUES (:id, :organization_id, 'master_csv', :record_id, :employee_id, :claim_date, :category, :amount, 'USD', :receipt_reference, :receipt_attached, 'approved', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+INSERT INTO expense_claims (id, organization_id, source_system, source_record_id, employee_id, claim_date, category, amount, currency, receipt_reference, receipt_attached, approval_state, import_id, imported_at, record_version)
+VALUES (:id, :organization_id, 'master_csv', :record_id, :employee_id, :claim_date, :category, :amount, 'USD', :receipt_reference, :receipt_attached, 'approved', :upload_id, CURRENT_TIMESTAMP, 1)
 ON CONFLICT(organization_id, source_system, source_record_id) DO UPDATE SET
     employee_id = excluded.employee_id,
     claim_date = excluded.claim_date,
@@ -202,12 +202,12 @@ ON CONFLICT(organization_id, source_system, source_record_id) DO UPDATE SET
     amount = excluded.amount,
     receipt_reference = excluded.receipt_reference,
     receipt_attached = excluded.receipt_attached,
-    updated_at = CURRENT_TIMESTAMP
+    imported_at = CURRENT_TIMESTAMP
 """
 
 UPSERT_LEAVE_SQL = """
-INSERT INTO leave (id, organization_id, source_system, source_record_id, employee_id, leave_type, start_date, end_date, days_taken, approval_state, created_at, updated_at)
-VALUES (:id, :organization_id, 'master_csv', :record_id, :employee_id, :leave_type, :start_date, :end_date, :days_taken, :approval_state, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+INSERT INTO leave (id, organization_id, source_system, source_record_id, employee_id, leave_type, start_date, end_date, days_taken, approval_state, import_id, imported_at, record_version)
+VALUES (:id, :organization_id, 'master_csv', :record_id, :employee_id, :leave_type, :start_date, :end_date, :days_taken, :approval_state, :upload_id, CURRENT_TIMESTAMP, 1)
 ON CONFLICT(organization_id, source_system, source_record_id) DO UPDATE SET
     employee_id = excluded.employee_id,
     leave_type = excluded.leave_type,
@@ -215,7 +215,7 @@ ON CONFLICT(organization_id, source_system, source_record_id) DO UPDATE SET
     end_date = excluded.end_date,
     days_taken = excluded.days_taken,
     approval_state = excluded.approval_state,
-    updated_at = CURRENT_TIMESTAMP
+    imported_at = CURRENT_TIMESTAMP
 """
 
 UPSERT_LEAVE_BALANCE_SQL = """
@@ -501,6 +501,7 @@ class MasterImportService:
         actor_id: str,
         actor_org: str,
         actor_role: str,
+        db: Optional[Session] = None,
     ):
         """
         Background task:
@@ -512,7 +513,10 @@ class MasterImportService:
         5. Triggers background evaluation of the rules engine across all employees.
         """
         start_time = time.time()
-        db: Session = SessionLocal()
+        close_db = False
+        if db is None:
+            db = SessionLocal()
+            close_db = True
         rejected_file_path = Path(file_path).parent / f"rejected_{upload_id}.csv"
 
         try:
@@ -564,6 +568,30 @@ class MasterImportService:
                     db.commit()
                     return
 
+                stages = {
+                    "uploaded": {
+                        "status": "done",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "filename": upload.filename,
+                    },
+                    "validated": {
+                        "status": "in_progress",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    },
+                    "mapped": {"status": "pending"},
+                    "evaluated": {"status": "pending"},
+                    "dashboards_updated": {"status": "pending"},
+                }
+                upload.pipeline_stages = stages
+                db.commit()
+
+                # Ensure source_imports record exists for foreign key constraints
+                db.execute(text("""
+                    INSERT OR IGNORE INTO source_imports (import_id, organization_id, source_system, covered_period, status, completeness_flag, imported_at)
+                    VALUES (:import_id, :organization_id, 'master_csv', 'ALL', 'completed', 1, CURRENT_TIMESTAMP)
+                """), {"import_id": upload_id, "organization_id": actor_org})
+                db.commit()
+
                 # Pre-scan file to collect employee_ids defined in employee_profile rows
                 known_emp_ids = set(r[0] for r in db.query(Employee.employee_id).all())
                 f.seek(0)
@@ -587,6 +615,14 @@ class MasterImportService:
                 total_rows = 0
                 accepted_rows = 0
                 rejected_rows = 0
+                mapped_counts = {
+                    "employees": 0,
+                    "attendance": 0,
+                    "timesheets": 0,
+                    "expenses": 0,
+                    "leave": 0,
+                    "leave_balances": 0,
+                }
 
                 batch_params: List[Dict[str, Any]] = []
                 batch_employees: List[Dict[str, Any]] = []
@@ -680,6 +716,7 @@ class MasterImportService:
                                     "hours_total": parsed["hours_total"],
                                     "status": parsed["status"] or "Present",
                                     "overtime_approved": parsed["overtime_approved"] or "N",
+                                    "upload_id": upload_id,
                                 })
 
                             elif rec_type == "timesheet":
@@ -694,11 +731,12 @@ class MasterImportService:
                                     "hours_total": parsed["hours_total"] or 8.0,
                                     "status": st_raw,
                                     "approval_state": appr_state,
+                                    "upload_id": upload_id,
                                 })
 
                             elif rec_type == "expense":
                                 rec_att = parsed["receipt_attached"] or "N"
-                                rec_ref = "ATTACHED" if rec_att == "Y" else None
+                                rec_ref = None
                                 batch_expenses.append({
                                     "id": f"EXP_{rec_id}",
                                     "organization_id": actor_org,
@@ -709,6 +747,7 @@ class MasterImportService:
                                     "amount": parsed["amount"] or 0.0,
                                     "receipt_reference": rec_ref,
                                     "receipt_attached": rec_att,
+                                    "upload_id": upload_id,
                                 })
 
                             elif rec_type == "leave_request":
@@ -722,6 +761,7 @@ class MasterImportService:
                                     "end_date": parsed["end_date"],
                                     "days_taken": parsed["days"] or 1.0,
                                     "approval_state": parsed["status"] or "Approved",
+                                    "upload_id": upload_id,
                                 })
 
                             elif rec_type == "leave_balance":
@@ -739,21 +779,27 @@ class MasterImportService:
                         if len(batch_params) >= BATCH_SIZE:
                             db.execute(text(UPSERT_SQL), batch_params)
                             if batch_employees:
+                                mapped_counts["employees"] += len(batch_employees)
                                 db.execute(text(UPSERT_EMPLOYEE_SQL), batch_employees)
                                 batch_employees.clear()
                             if batch_attendance:
+                                mapped_counts["attendance"] += len(batch_attendance)
                                 db.execute(text(UPSERT_ATTENDANCE_SQL), batch_attendance)
                                 batch_attendance.clear()
                             if batch_timesheets:
+                                mapped_counts["timesheets"] += len(batch_timesheets)
                                 db.execute(text(UPSERT_TIMESHEET_SQL), batch_timesheets)
                                 batch_timesheets.clear()
                             if batch_expenses:
+                                mapped_counts["expenses"] += len(batch_expenses)
                                 db.execute(text(UPSERT_EXPENSE_SQL), batch_expenses)
                                 batch_expenses.clear()
                             if batch_leaves:
+                                mapped_counts["leave"] += len(batch_leaves)
                                 db.execute(text(UPSERT_LEAVE_SQL), batch_leaves)
                                 batch_leaves.clear()
                             if batch_leave_balances:
+                                mapped_counts["leave_balances"] += len(batch_leave_balances)
                                 db.execute(text(UPSERT_LEAVE_BALANCE_SQL), batch_leave_balances)
                                 batch_leave_balances.clear()
 
@@ -771,31 +817,65 @@ class MasterImportService:
                         db.execute(text(UPSERT_SQL), batch_params)
                         batch_params.clear()
                     if batch_employees:
+                        mapped_counts["employees"] += len(batch_employees)
                         db.execute(text(UPSERT_EMPLOYEE_SQL), batch_employees)
                         batch_employees.clear()
                     if batch_attendance:
+                        mapped_counts["attendance"] += len(batch_attendance)
                         db.execute(text(UPSERT_ATTENDANCE_SQL), batch_attendance)
                         batch_attendance.clear()
                     if batch_timesheets:
+                        mapped_counts["timesheets"] += len(batch_timesheets)
                         db.execute(text(UPSERT_TIMESHEET_SQL), batch_timesheets)
                         batch_timesheets.clear()
                     if batch_expenses:
+                        mapped_counts["expenses"] += len(batch_expenses)
                         db.execute(text(UPSERT_EXPENSE_SQL), batch_expenses)
                         batch_expenses.clear()
                     if batch_leaves:
+                        mapped_counts["leave"] += len(batch_leaves)
                         db.execute(text(UPSERT_LEAVE_SQL), batch_leaves)
                         batch_leaves.clear()
                     if batch_leave_balances:
+                        mapped_counts["leave_balances"] += len(batch_leave_balances)
                         db.execute(text(UPSERT_LEAVE_BALANCE_SQL), batch_leave_balances)
                         batch_leave_balances.clear()
 
                     db.commit()
+
+                # Pipeline Stage 2 & 3 complete
+                stages["validated"] = {
+                    "status": "done",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "total_rows": total_rows,
+                    "accepted_rows": accepted_rows,
+                    "rejected_rows": rejected_rows,
+                }
+                stages["mapped"] = {
+                    "status": "done",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "tables": mapped_counts,
+                }
+                stages["evaluated"] = {
+                    "status": "in_progress",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                }
+                upload.pipeline_stages = stages
+                db.commit()
+
+                # Ensure source_imports record exists for foreign key constraints
+                db.execute(text("""
+                    INSERT OR IGNORE INTO source_imports (import_id, organization_id, source_system, covered_period, status, completeness_flag, imported_at)
+                    VALUES (:import_id, :organization_id, 'master_csv', 'ALL', 'completed', 1, CURRENT_TIMESTAMP)
+                """), {"import_id": upload_id, "organization_id": actor_org})
+                db.commit()
 
             # Link user accounts to employees
             try:
                 cls.reconcile_users_with_employees(db)
             except Exception as link_err:
                 logger.warning("Error reconciling user accounts with employees: %s", link_err)
+                db.rollback()
 
             duration = time.time() - start_time
             upload.status = "done"
@@ -829,12 +909,36 @@ class MasterImportService:
                 logger.warning("Audit event recording failed for upload %s: %s", upload_id, audit_err)
 
             # Trigger background evaluation of rules engine
+            eval_res = {}
             try:
                 engine = AuditEngine()
                 eval_res = engine.evaluate_all_employees(db, trigger_source="import_completed")
                 logger.info("Evaluation completed after import: %s", eval_res)
             except Exception as eval_err:
                 logger.warning("Rules evaluation failed after import: %s", eval_err)
+
+            # Complete stages 4 and 5
+            stages["evaluated"] = {
+                "status": "done",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "eval_run_id": eval_res.get("run_batch_id"),
+                "periods": eval_res.get("periods", []),
+                "total_runs": eval_res.get("total_runs", 0),
+                "total_blocking": eval_res.get("total_blocking", 0),
+                "total_warning": eval_res.get("total_warning", 0),
+            }
+            stages["dashboards_updated"] = {
+                "status": "done",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+            upload.pipeline_stages = stages
+            db.commit()
+
+            try:
+                from app.api.audit import invalidate_audit_cache
+                invalidate_audit_cache()
+            except Exception:
+                pass
 
         except Exception as e:
             logger.exception("Error processing master upload %s: %s", upload_id, e)
@@ -843,12 +947,21 @@ class MasterImportService:
                 if upload:
                     upload.status = "failed"
                     upload.error_message = str(e)
+                    if upload.pipeline_stages:
+                        st = dict(upload.pipeline_stages)
+                        for s_name in ["validated", "mapped", "evaluated", "dashboards_updated"]:
+                            if st.get(s_name, {}).get("status") == "in_progress":
+                                st[s_name]["status"] = "failed"
+                                st[s_name]["error"] = str(e)
+                                break
+                        upload.pipeline_stages = st
                     db.commit()
             except Exception:
                 pass
         finally:
-            db.close()
-            if os.path.exists(file_path):
+            if close_db:
+                db.close()
+            if "temp_uploads" in str(file_path) and os.path.exists(file_path):
                 try:
                     os.remove(file_path)
                 except OSError:
@@ -888,3 +1001,42 @@ class MasterImportService:
             if emp and u.employee_id != emp.employee_id:
                 u.employee_id = emp.employee_id
                 db.commit()
+
+        # Ensure core personas exist with valid credentials and linked IDs
+        core_demo_personas = [
+            ("alice@company.com", "EMP0001", "Alice Employee", "employee"),
+            ("bob@company.com", "EMP0002", "Bob Manager", "manager"),
+            ("carol@company.com", "EMP0003", "Carol HR Admin", "hr_admin"),
+            ("irene@company.com", "EMP0004", "Irene IC Member", "ic_member"),
+        ]
+        from app.auth.service import hash_password
+        default_hash = hash_password("Password123!")
+
+        for c_email, c_eid, c_name, c_role in core_demo_personas:
+            u = db.query(UserAuth).filter(func.lower(UserAuth.email) == c_email).first()
+            emp = db.query(Employee).filter(
+                or_(
+                    func.lower(Employee.email) == c_email,
+                    Employee.employee_id == c_eid
+                )
+            ).first()
+            resolved_eid = emp.employee_id if emp else c_eid
+
+            if not u:
+                u = UserAuth(
+                    employee_id=resolved_eid,
+                    organization_id=emp.organization_id if emp else "ORG_DEMO_01",
+                    email=c_email,
+                    password_hash=default_hash,
+                    role=c_role,
+                    is_verified=True,
+                )
+                db.add(u)
+            else:
+                if u.employee_id != resolved_eid:
+                    u.employee_id = resolved_eid
+                if not u.password_hash:
+                    u.password_hash = default_hash
+                u.role = c_role
+                u.is_verified = True
+        db.commit()

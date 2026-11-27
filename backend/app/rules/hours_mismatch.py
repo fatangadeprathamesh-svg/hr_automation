@@ -100,7 +100,10 @@ class HoursMismatchRule(BaseRule):
             else:
                 att_hours = 0.0
 
-            diff = abs(ts_hours - att_hours)
+            ot_appr = (getattr(att, "overtime_approved", "") or "").strip().upper()
+            expected_att_hours = att_hours if (att_hours <= 8.0 or ot_appr == "Y") else 8.0
+
+            diff = abs(ts_hours - expected_att_hours)
             delta_mins = round(diff * 60.0, 1)
 
             # Tolerance from policy config (default 30 mins / 0.5 hours)

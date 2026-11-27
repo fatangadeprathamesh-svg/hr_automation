@@ -2,6 +2,7 @@ from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, Depends, HTTPException, Header, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+from sqlalchemy import func, or_
 from app.database import get_db
 from app.auth.security import get_current_actor, ActorIdentity
 from app.workflow.service import WorkflowService

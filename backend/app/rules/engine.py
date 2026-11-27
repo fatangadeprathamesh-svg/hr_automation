@@ -127,6 +127,7 @@ class AuditEngine:
         period: str,
         trigger_source: str = "manual",
         policy_version_id: Optional[str] = None,
+        commit: bool = True,
     ) -> Dict[str, Any]:
         """
         Executes deterministic rules against an employee's month-end data.
@@ -257,7 +258,10 @@ class AuditEngine:
             db.add(flag)
             persisted_flags.append(flag)
 
-        db.commit()
+        if commit:
+            db.commit()
+        else:
+            db.flush()
 
         return {
             "audit_run_id": audit_run.audit_run_id,
@@ -295,20 +299,20 @@ class AuditEngine:
         Executes audit evaluation across all employees for specified or detected periods.
         Logs an immutable hash-chained audit event into the ledger.
         """
-        from sqlalchemy import distinct, func
+        from sqlalchemy import func
         # 1. Determine target periods
         periods = set()
         if period:
             periods.add(period)
         else:
             # Detect periods from operational tables
-            for row in db.query(distinct(func.strftime("%Y-%m", Attendance.work_date))).all():
+            for row in db.query(func.strftime("%Y-%m", Attendance.work_date)).distinct().all():
                 if row[0]:
                     periods.add(row[0])
-            for row in db.query(distinct(func.strftime("%Y-%m", Timesheet.work_date))).all():
+            for row in db.query(func.strftime("%Y-%m", Timesheet.work_date)).distinct().all():
                 if row[0]:
                     periods.add(row[0])
-            for row in db.query(distinct(func.strftime("%Y-%m", ExpenseClaim.claim_date))).all():
+            for row in db.query(func.strftime("%Y-%m", ExpenseClaim.claim_date)).distinct().all():
                 if row[0]:
                     periods.add(row[0])
             if not periods:
@@ -328,10 +332,13 @@ class AuditEngine:
                     employee_id=emp.employee_id,
                     period=p,
                     trigger_source=trigger_source,
+                    commit=False,
                 )
                 total_blocking += res.get("blocking_count", 0)
                 total_warning += res.get("warning_count", 0)
                 total_runs += 1
+            # Commit once per period for high performance and low lock duration
+            db.commit()
 
         # 3. Write immutable audit ledger event
         run_batch_id = generate_uuid()

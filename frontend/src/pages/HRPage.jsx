@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   fetchHRMetrics,
   fetchSubmissions,
@@ -7,6 +7,7 @@ import {
   fetchHrAiSummary,
   rerunAudit,
   fetchAuditPeriods,
+  fetchSyncStatus,
 } from '../api';
 import GlassCard from '../components/common/GlassCard';
 import StatsCard from '../components/common/StatsCard';
@@ -50,6 +51,7 @@ export default function HRPage() {
   const [availableMonths, setAvailableMonths] = useState(['2026-10', '2026-09', '2026-08']);
   const [isRerunning, setIsRerunning] = useState(false);
   const [metrics, setMetrics] = useState(null);
+  const [syncStatus, setSyncStatus] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -74,32 +76,54 @@ export default function HRPage() {
       if (res?.periods?.length) {
         setAvailableMonths(res.periods);
         if (!res.periods.includes(selectedMonth)) {
-          setSelectedMonth(res.current_period || res.periods[0]);
+          setSelectedMonth(res.default_period || res.current_period || res.periods[0]);
         }
       }
     }).catch(() => {});
   }, []);
 
+  const lastFetchRef = useRef(0);
+
   useEffect(() => {
     loadData(selectedMonth);
   }, [selectedMonth]);
 
-  async function loadData(month) {
-    setLoading(true);
+  // Tab focus listener with 30s throttling and background refresh
+  useEffect(() => {
+    function onFocus() {
+      const now = Date.now();
+      if (selectedMonth && now - lastFetchRef.current > 30000) {
+        lastFetchRef.current = now;
+        loadData(selectedMonth, true);
+      }
+    }
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [selectedMonth]);
+
+  async function loadData(month, isBackground = false) {
+    if (!isBackground) {
+      setLoading(true);
+    }
     setError(null);
     try {
-      const [m, s, ai] = await Promise.all([
+      lastFetchRef.current = Date.now();
+      const [m, s, ai, sync] = await Promise.all([
         fetchHRMetrics(month),
         fetchSubmissions(month),
         fetchHrAiSummary(month),
+        fetchSyncStatus().catch(() => null),
       ]);
       setMetrics(m);
       setSubmissions(s);
       setAiSummary(ai);
+      if (sync) setSyncStatus(sync);
     } catch (err) {
       setError(err.message || 'Failed to load HR compliance data.');
     } finally {
-      setLoading(false);
+      if (!isBackground) {
+        setLoading(false);
+      }
     }
   }
 
@@ -201,9 +225,17 @@ export default function HRPage() {
       {/* Header with Month Selector Dropdown & Re-run Audit */}
       <div className="glass-panel rounded-2xl px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-white">
-            Company-Wide HR Audit Dashboard
-          </h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              Company-Wide HR Audit Dashboard
+            </h2>
+            {syncStatus?.last_evaluation_time && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Data synced {new Date(syncStatus.last_evaluation_time).toLocaleTimeString()} | {syncStatus.total_findings ?? 0} findings
+              </span>
+            )}
+          </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Monitoring submission completion rates, policy blockers, and payroll export readiness.
           </p>
@@ -324,29 +356,45 @@ export default function HRPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           title="Submitted vs Pending"
-          value={`${metrics?.submitted_count ?? 0} / ${metrics?.total_employees ?? 0}`}
-          subtitle={metrics?.total_employees ? `${((metrics.submitted_count / metrics.total_employees) * 100).toFixed(1)}% completion rate` : '0.0% completion rate'}
+          value={!metrics?.total_employees ? '--' : `${metrics?.submitted_count ?? 0} / ${metrics?.total_employees ?? 0}`}
+          subtitle={
+            !metrics?.total_employees
+              ? 'Not evaluated yet. Import data to run the audit'
+              : `${((metrics.submitted_count / metrics.total_employees) * 100).toFixed(1)}% completion rate`
+          }
           icon={ShieldCheck}
           color="green"
         />
         <StatsCard
           title="Open Blockers"
-          value={metrics?.open_blockers ?? 0}
-          subtitle={`Across ${metrics?.total_employees ?? 0} active employees`}
+          value={!metrics?.total_employees ? '--' : metrics?.open_blockers ?? 0}
+          subtitle={
+            !metrics?.total_employees
+              ? 'Not evaluated yet. Import data to run the audit'
+              : `Across ${metrics?.total_employees ?? 0} active employees`
+          }
           icon={AlertTriangle}
-          color={metrics?.open_blockers > 0 ? 'red' : 'green'}
+          color={!metrics?.total_employees ? 'blue' : metrics?.open_blockers > 0 ? 'red' : 'green'}
         />
         <StatsCard
           title="Average Readiness"
-          value={`${metrics?.average_readiness !== undefined ? metrics.average_readiness : 0}%`}
-          subtitle="Goal: above 95.0%"
+          value={!metrics?.total_employees ? '--' : `${metrics?.average_readiness !== undefined ? metrics.average_readiness : 0}%`}
+          subtitle={
+            !metrics?.total_employees
+              ? 'Not evaluated yet. Import data to run the audit'
+              : 'Goal: above 95.0%'
+          }
           icon={Clock}
           color="accent"
         />
         <StatsCard
           title="Avg Time to Resolve"
-          value={`${metrics?.average_resolve_days !== undefined ? metrics.average_resolve_days : 0} Days`}
-          subtitle="Policy SLA: under 2.5 days"
+          value={!metrics?.total_employees ? '--' : `${metrics?.average_resolve_days !== undefined ? metrics.average_resolve_days : 0} Days`}
+          subtitle={
+            !metrics?.total_employees
+              ? 'Not evaluated yet. Import data to run the audit'
+              : 'Policy SLA: under 2.5 days'
+          }
           icon={FileText}
           color="blue"
         />

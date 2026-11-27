@@ -77,7 +77,7 @@ def draft_correction_request(
 @router.post("/hr-summary", status_code=status.HTTP_200_OK)
 def get_hr_monthly_summary(
     req: HrSummaryRequest,
-    actor: ActorIdentity = Depends(require_role("hr_admin", "manager", "service")),
+    actor: ActorIdentity = Depends(require_role("hr_admin", "hr", "service")),
     db: Session = Depends(get_db),
 ):
     """

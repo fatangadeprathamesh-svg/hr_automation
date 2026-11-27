@@ -1,12 +1,20 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends
+import os
+import logging
+import traceback
+import uuid
+from fastapi import FastAPI, Depends, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy import text, desc
 from app.config import settings
 from app.database import get_db
 from app.seed import init_db_and_seed
 from app.auth.security import get_current_actor, ActorIdentity, create_access_token
-from app.models.hr import Employee
+from app.models.hr import Employee, Attendance, Timesheet, ExpenseClaim, Leave, AuditRun, AuditFlag
+from app.models.master_hr import MasterUpload, MasterHRRecord
+from app.models.duties import LeaveBalance
 from app.api.imports import router as imports_router
 from app.api.audit import router as audit_router
 from app.api.corrections import router as corrections_router
@@ -23,13 +31,15 @@ from app.services.purge_service import ensure_baseline_schema_and_accounts, purg
 from app.auth.security import require_role
 from app.database import SessionLocal
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize and seed database: opt-in via SEED_DEMO_DATA=True
     if settings.SEED_DEMO_DATA:
         init_db_and_seed()
-    else:
+    elif not os.environ.get("PYTEST_CURRENT_TEST"):
         db = SessionLocal()
         try:
             ensure_baseline_schema_and_accounts(db)
@@ -73,6 +83,30 @@ app.include_router(explainers_router)
 app.include_router(master_uploads_router)
 app.include_router(duties_router)
 app.include_router(consent_router)
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    req_id = str(uuid.uuid4())
+    logger.error("Unhandled Exception [req_id=%s] on %s: %s\n%s", req_id, request.url.path, exc, traceback.format_exc())
+    response = JSONResponse(
+        status_code=500,
+        content={
+            "detail": f"Server error: {str(exc)}",
+            "error_type": type(exc).__name__,
+            "request_id": req_id,
+            "path": request.url.path,
+        },
+    )
+    origin = request.headers.get("origin")
+    if origin:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+    else:
+        response.headers["Access-Control-Allow-Origin"] = "*"
+    return response
 
 
 @app.get("/api/health")
@@ -138,6 +172,8 @@ def reset_all_data(
     Safely purges all uploaded, ingested, and synthetic data,
     resetting the compliance ledger to genesis while keeping schema and admin accounts.
     """
+    from app.api.audit import invalidate_audit_cache
+    invalidate_audit_cache()
     result = purge_all_demo_data(db)
     return {
         "status": "ok",

@@ -36,6 +36,7 @@ class MasterUpload(Base):
     error_message = Column(Text, nullable=True)
     duplicate_warning = Column(Boolean, nullable=False, default=False)
     rejected_details = Column(JSON, nullable=True, default=list)
+    pipeline_stages = Column(JSON, nullable=True, default=dict)
 
 
 class MasterHRRecord(Base):

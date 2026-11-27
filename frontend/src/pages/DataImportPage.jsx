@@ -29,6 +29,7 @@ import {
   getMasterStats,
   resetAllDataApi,
   getCurrentPersona,
+  retryUpload,
 } from '../api';
 import GlassCard from '../components/common/GlassCard';
 import StatsCard from '../components/common/StatsCard';
@@ -60,7 +61,9 @@ const CANONICAL_COLUMNS = [
   "hours_scheduled", "break_minutes", "leave_entitlement", "leave_taken_so_far",
   "leave_remaining", "engagement_score", "satisfaction_score",
   "work_life_balance_score", "training_program", "training_outcome",
-  "trainer", "training_location", "training_cost", "desired_salary", "country"
+  "trainer", "training_location", "training_cost", "desired_salary", "country",
+  // 6 optional columns
+  "email", "project_code", "amount", "expense_category", "receipt_attached", "overtime_approved"
 ];
 
 function formatFileSize(bytes) {
@@ -84,6 +87,23 @@ export default function DataImportPage() {
   const [uploadSuccess, setUploadSuccess] = useState(null);
   const [rejectedRowsData, setRejectedRowsData] = useState([]);
   const [isLoadingRejected, setIsLoadingRejected] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  async function handleRetryUpload(uploadId) {
+    if (!uploadId) return;
+    setIsRetrying(true);
+    setUploadError(null);
+    try {
+      await retryUpload(uploadId);
+      setIsUploading(true);
+      const res = await getUploadStatus(uploadId);
+      setCurrentUpload(res);
+    } catch (err) {
+      setUploadError(err.message || 'Failed to retry upload.');
+    } finally {
+      setIsRetrying(false);
+    }
+  }
 
   // Guarded Reset Data state
   const persona = getCurrentPersona();
@@ -707,6 +727,192 @@ export default function DataImportPage() {
                     </span>
                   </div>
                 )}
+
+                {/* 5-Stage Pipeline Stepper */}
+                <div className="pt-3 border-t border-slate-200/50 dark:border-slate-800/60">
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-[var(--accent-text)]" />
+                    <span>End-to-End Ingestion & Audit Pipeline</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5">
+                    {/* Stage 1: Uploaded */}
+                    {(() => {
+                      const stage = currentUpload.pipeline_stages?.uploaded || (currentUpload.status !== 'queued' ? { status: 'done' } : { status: 'in_progress' });
+                      const isDone = stage.status === 'done';
+                      const isProgress = stage.status === 'in_progress' || (currentUpload.status === 'queued' && !isDone);
+                      const isFailed = stage.status === 'failed';
+                      return (
+                        <div className={`p-3 rounded-xl border text-xs flex flex-col justify-between ${
+                          isDone ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-500/30' :
+                          isProgress ? 'bg-[var(--accent-bg-subtle)] border-[var(--accent-border-subtle)]' :
+                          isFailed ? 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-500/30' :
+                          'bg-slate-50/50 dark:bg-slate-800/30 border-slate-200/50 dark:border-slate-700/50 opacity-60'
+                        }`}>
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-bold text-[11px] text-slate-700 dark:text-slate-300">1. Uploaded</span>
+                              {isDone ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> :
+                               isProgress ? <RefreshCw className="w-3.5 h-3.5 text-[var(--accent-text)] animate-spin" /> :
+                               isFailed ? <AlertCircle className="w-3.5 h-3.5 text-rose-500" /> :
+                               <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600" />}
+                            </div>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400">Master CSV saved</p>
+                          </div>
+                          {stage.timestamp && (
+                            <span className="text-[9px] font-mono text-slate-400 mt-2">{new Date(stage.timestamp).toLocaleTimeString()}</span>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Stage 2: Validated */}
+                    {(() => {
+                      const stage = currentUpload.pipeline_stages?.validated || (currentUpload.status === 'done' ? { status: 'done', accepted_rows: currentUpload.accepted_rows, rejected_rows: currentUpload.rejected_rows } : { status: currentUpload.status === 'processing' ? 'in_progress' : 'pending' });
+                      const isDone = stage.status === 'done';
+                      const isProgress = stage.status === 'in_progress';
+                      const isFailed = stage.status === 'failed';
+                      return (
+                        <div className={`p-3 rounded-xl border text-xs flex flex-col justify-between ${
+                          isDone ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-500/30' :
+                          isProgress ? 'bg-[var(--accent-bg-subtle)] border-[var(--accent-border-subtle)]' :
+                          isFailed ? 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-500/30' :
+                          'bg-slate-50/50 dark:bg-slate-800/30 border-slate-200/50 dark:border-slate-700/50 opacity-60'
+                        }`}>
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-bold text-[11px] text-slate-700 dark:text-slate-300">2. Validated</span>
+                              {isDone ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> :
+                               isProgress ? <RefreshCw className="w-3.5 h-3.5 text-[var(--accent-text)] animate-spin" /> :
+                               isFailed ? <AlertCircle className="w-3.5 h-3.5 text-rose-500" /> :
+                               <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600" />}
+                            </div>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400">Schema & punch check</p>
+                          </div>
+                          {isDone && (
+                            <span className="text-[9px] font-mono text-emerald-600 dark:text-emerald-400 mt-2">
+                              {stage.accepted_rows?.toLocaleString() ?? currentUpload.accepted_rows} ok / {stage.rejected_rows ?? currentUpload.rejected_rows} rej
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Stage 3: Mapped */}
+                    {(() => {
+                      const stage = currentUpload.pipeline_stages?.mapped || (currentUpload.status === 'done' ? { status: 'done', rows_mapped: currentUpload.rows_mapped } : { status: 'pending' });
+                      const isDone = stage.status === 'done';
+                      const isProgress = stage.status === 'in_progress';
+                      const isFailed = stage.status === 'failed';
+                      const mapCounts = stage.rows_mapped || {};
+                      const totalMapped = Object.values(mapCounts).reduce((a, b) => a + b, 0);
+                      return (
+                        <div className={`p-3 rounded-xl border text-xs flex flex-col justify-between ${
+                          isDone ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-500/30' :
+                          isProgress ? 'bg-[var(--accent-bg-subtle)] border-[var(--accent-border-subtle)]' :
+                          isFailed ? 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-500/30' :
+                          'bg-slate-50/50 dark:bg-slate-800/30 border-slate-200/50 dark:border-slate-700/50 opacity-60'
+                        }`}>
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-bold text-[11px] text-slate-700 dark:text-slate-300">3. Mapped</span>
+                              {isDone ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> :
+                               isProgress ? <RefreshCw className="w-3.5 h-3.5 text-[var(--accent-text)] animate-spin" /> :
+                               isFailed ? <AlertCircle className="w-3.5 h-3.5 text-rose-500" /> :
+                               <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600" />}
+                            </div>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400">Attendance, TS, Claims</p>
+                          </div>
+                          {isDone && (
+                            <span className="text-[9px] font-mono text-slate-500 dark:text-slate-400 mt-2">
+                              {totalMapped > 0 ? `${totalMapped.toLocaleString()} rows` : '5 audit tables'}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Stage 4: Evaluated */}
+                    {(() => {
+                      const stage = currentUpload.pipeline_stages?.evaluated || (currentUpload.status === 'done' ? { status: 'done' } : { status: 'pending' });
+                      const isDone = stage.status === 'done';
+                      const isProgress = stage.status === 'in_progress';
+                      const isFailed = stage.status === 'failed';
+                      return (
+                        <div className={`p-3 rounded-xl border text-xs flex flex-col justify-between ${
+                          isDone ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-500/30' :
+                          isProgress ? 'bg-[var(--accent-bg-subtle)] border-[var(--accent-border-subtle)]' :
+                          isFailed ? 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-500/30' :
+                          'bg-slate-50/50 dark:bg-slate-800/30 border-slate-200/50 dark:border-slate-700/50 opacity-60'
+                        }`}>
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-bold text-[11px] text-slate-700 dark:text-slate-300">4. Evaluated</span>
+                              {isDone ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> :
+                               isProgress ? <RefreshCw className="w-3.5 h-3.5 text-[var(--accent-text)] animate-spin" /> :
+                               isFailed ? <AlertCircle className="w-3.5 h-3.5 text-rose-500" /> :
+                               <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600" />}
+                            </div>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400">Rules Engine</p>
+                          </div>
+                          {isDone && (
+                            <span className="text-[9px] font-mono text-emerald-600 dark:text-emerald-400 mt-2">
+                              {stage.total_flags !== undefined ? `${stage.total_flags} findings` : 'Evaluated'}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Stage 5: Dashboards updated */}
+                    {(() => {
+                      const stage = currentUpload.pipeline_stages?.dashboards_updated || (currentUpload.status === 'done' ? { status: 'done' } : { status: 'pending' });
+                      const isDone = stage.status === 'done';
+                      const isProgress = stage.status === 'in_progress';
+                      const isFailed = stage.status === 'failed';
+                      return (
+                        <div className={`p-3 rounded-xl border text-xs flex flex-col justify-between ${
+                          isDone ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-500/30' :
+                          isProgress ? 'bg-[var(--accent-bg-subtle)] border-[var(--accent-border-subtle)]' :
+                          isFailed ? 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-500/30' :
+                          'bg-slate-50/50 dark:bg-slate-800/30 border-slate-200/50 dark:border-slate-700/50 opacity-60'
+                        }`}>
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-bold text-[11px] text-slate-700 dark:text-slate-300">5. Synced</span>
+                              {isDone ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> :
+                               isProgress ? <RefreshCw className="w-3.5 h-3.5 text-[var(--accent-text)] animate-spin" /> :
+                               isFailed ? <AlertCircle className="w-3.5 h-3.5 text-rose-500" /> :
+                               <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600" />}
+                            </div>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400">Dashboards ready</p>
+                          </div>
+                          {isDone && (
+                            <span className="text-[9px] font-mono text-emerald-600 dark:text-emerald-400 mt-2">Ready</span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Retry button if failed */}
+                  {currentUpload.status === 'failed' && (
+                    <div className="mt-3 flex items-center justify-between p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800">
+                      <div className="text-xs text-rose-700 dark:text-rose-300">
+                        <strong>Pipeline Stalled:</strong> {currentUpload.error_message || 'An error occurred during ingestion.'}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRetryUpload(currentUpload.id)}
+                        disabled={isRetrying}
+                        className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${isRetrying ? 'animate-spin' : ''}`} />
+                        <span>{isRetrying ? 'Retrying...' : 'Retry Ingestion'}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </GlassCard>

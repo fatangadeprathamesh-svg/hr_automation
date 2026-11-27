@@ -277,6 +277,32 @@ text {
   animation: mergeSuccessBar 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* ==========================================================================
+   BLADE DIAGONAL LOGIN TRANSITION
+   ========================================================================== */
+.blade-card {
+  --rake: -9deg;
+  --counter-rake: 9deg;
+  --blade-ease: cubic-bezier(0.77, 0, 0.18, 1);
+  --blade-dur: 650ms;
+}
+
+@media (min-width: 900px) {
+  .blade-pane-brand {
+    transition: transform var(--blade-dur) var(--blade-ease);
+  }
+  .blade-pane-form {
+    transition: transform var(--blade-dur) var(--blade-ease);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blade-pane-brand,
+  .blade-pane-form {
+    transition-duration: 150ms !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
     animation-duration: 0.001ms !important;

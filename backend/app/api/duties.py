@@ -89,6 +89,14 @@ class AIDraftRequest(BaseModel):
 # Hub & List Endpoints
 # ---------------------------------------------------------------------------
 
+def check_ic_member_duty_access(actor: ActorIdentity, duty_key: str):
+    if actor.role == "ic_member" and duty_key != "posh":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden (403): Operation not permitted for role 'ic_member'. IC Member has access to POSH duties only.",
+        )
+
+
 @router.get("", status_code=status.HTTP_200_OK)
 @router.get("/hub", status_code=status.HTTP_200_OK)
 def list_duties_hub(
@@ -103,6 +111,9 @@ def list_duties_hub(
     results = []
 
     for key, config in DUTY_REGISTRY.items():
+        if actor.role == "ic_member" and key != "posh":
+            continue
+
         base_query = db.query(DutyTask).filter(DutyTask.duty_key == key)
 
         # Scoping per role:
@@ -171,6 +182,7 @@ def get_duty_detail(
     db: Session = Depends(get_db),
 ):
     """Retrieves full metadata, policy rules, and live metric cards for a single duty."""
+    check_ic_member_duty_access(actor, duty_key)
     config = get_duty_config(duty_key)
     today = date.today()
 
@@ -228,6 +240,7 @@ def list_duty_tasks(
     Returns tasks for a duty, partitioned into Bot Activity, Approval Queue, and Records tabs.
     Applies strict POSH confidentiality: non-IC members receive redacted/restricted payloads.
     """
+    check_ic_member_duty_access(actor, duty_key)
     config = get_duty_config(duty_key)
 
     # 1. POSH Isolation Enforcement
@@ -295,6 +308,7 @@ def create_duty_task(
     db: Session = Depends(get_db),
 ):
     """Manually creates a duty task (or prepared item)."""
+    check_ic_member_duty_access(actor, duty_key)
     task = DutyEngineService.create_task(
         db=db,
         duty_key=duty_key,
@@ -322,6 +336,7 @@ def decide_duty_task(
     Enforces role authorization, maker-checker, and optimistic locking.
     Appends an immutable cryptographic event to the audit ledger.
     """
+    check_ic_member_duty_access(actor, duty_key)
     updated_task = DutyEngineService.decide_task(
         db=db,
         task_id=task_id,
@@ -355,6 +370,7 @@ def trigger_duty_bot_run(
     Executes deterministic bot preparation logic for the requested duty.
     The bot prepares tasks, calculates numbers, drafts notices, and queues them for human approval.
     """
+    check_ic_member_duty_access(actor, duty_key)
     get_duty_config(duty_key)
 
     if duty_key == "payroll_statutory":
